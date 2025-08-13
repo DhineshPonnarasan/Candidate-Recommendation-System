@@ -23,7 +23,7 @@ A comprehensive **Full-Stack Candidate Recommendation System** with modern web t
 - ✅ Password hashing and security best practices
 
 ### ✅ **3. Advanced Resume Processing**
-- ✅ Multi-format resume upload (PDF, DOCX, TXT)
+- ✅ Multi-format resume upload (PDF, WORD, DOCX, TXT)
 - ✅ Intelligent resume parsing and text extraction
 - ✅ Contact information extraction (email, phone, LinkedIn)
 - ✅ Skills and experience analysis
