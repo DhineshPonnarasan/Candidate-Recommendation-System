@@ -1,0 +1,14 @@
+nohup: ignoring input
+SQLite database tables initialized successfully!
+Loading embedding model: all-MiniLM-L6-v2
+Embedding model loaded successfully!
+Traceback (most recent call last):
+  File "/workspaces/Candidate-Recommendation-System/backend/run.py", line 20, in <module>
+    app = create_app()
+          ^^^^^^^^^^^^
+  File "/workspaces/Candidate-Recommendation-System/backend/app.py", line 71, in create_app
+    from routes.matching_routes import matching_bp
+  File "/workspaces/Candidate-Recommendation-System/backend/app/routes/matching_routes.py", line 1
+    zfrom flask import Blueprint, request, jsonify
+          ^^^^^
+SyntaxError: invalid syntax
