@@ -1,5 +1,4 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { 
@@ -13,7 +12,6 @@ import {
   CogIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline'
-
 const plans = [
   {
     name: 'Starter',
@@ -82,7 +80,6 @@ const plans = [
     ctaColor: 'bg-gradient-to-r from-success-600 to-emerald-600 hover:from-success-700 hover:to-emerald-700'
   }
 ]
-
 const faqs = [
   {
     question: 'How does the free trial work?',
@@ -105,20 +102,15 @@ const faqs = [
     answer: 'Yes, we offer custom pricing for large teams and enterprises. Contact our sales team for a personalized quote.'
   }
 ]
-
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50">
-      {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-primary-200 to-accent-200 rounded-full opacity-20 blur-3xl animate-pulse-soft"></div>
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-200 to-purple-200 rounded-full opacity-20 blur-3xl animate-bounce-gentle"></div>
         </div>
-
         <div className="max-w-7xl mx-auto relative">
-          {/* Breadcrumb */}
           <motion.nav
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -129,7 +121,6 @@ export default function PricingPage() {
             <span className="mx-2">/</span>
             <span className="text-gray-900 font-medium">Pricing</span>
           </motion.nav>
-
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -145,18 +136,15 @@ export default function PricingPage() {
               <SparklesIcon className="w-5 h-5 mr-2" />
               Simple, Transparent Pricing
             </motion.div>
-            
             <h1 className="text-5xl md:text-7xl font-bold mb-8">
               <span className="bg-gradient-to-r from-primary-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Choose Your Plan
               </span>
             </h1>
-            
             <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
               Start free, scale as you grow. No hidden fees, no long-term contracts, 
               and you can upgrade, downgrade, or cancel anytime.
             </p>
-
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -179,8 +167,6 @@ export default function PricingPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* Pricing Cards */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-8">
@@ -194,7 +180,6 @@ export default function PricingPage() {
                 className={`relative group ${plan.highlight ? 'lg:scale-105 lg:z-10' : ''}`}
               >
                 <div className={`bg-white rounded-3xl p-8 shadow-soft hover:shadow-medium transition-all duration-300 border-2 ${plan.highlight ? 'border-primary-200' : 'border-gray-100'} group-hover:border-primary-200`}>
-                  {/* Popular Badge */}
                   {plan.popular && (
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                       <div className="bg-gradient-to-r from-primary-500 to-accent-500 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center shadow-lg">
@@ -203,23 +188,18 @@ export default function PricingPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* Plan Header */}
                   <div className="text-center mb-8">
                     <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r ${plan.color} rounded-2xl text-white mb-4`}>
                       {index === 0 && <ChartBarIcon className="w-8 h-8" />}
                       {index === 1 && <SparklesIcon className="w-8 h-8" />}
                       {index === 2 && <ShieldCheckIcon className="w-8 h-8" />}
                     </div>
-                    
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                     <p className="text-gray-600 mb-6">{plan.description}</p>
-                    
                     <div className="mb-6">
                       <span className="text-5xl font-bold text-gray-900">{plan.price}</span>
                       <span className="text-gray-500 ml-1">{plan.period}</span>
                     </div>
-
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -229,8 +209,6 @@ export default function PricingPage() {
                       <ArrowRightIcon className="w-5 h-5 ml-2" />
                     </motion.button>
                   </div>
-
-                  {/* Features List */}
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-900 mb-4">What's included:</h4>
                     {plan.features.map((feature, featureIndex) => (
@@ -257,8 +235,6 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
-
-      {/* Feature Comparison */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -273,7 +249,6 @@ export default function PricingPage() {
               See how our plans stack up and find the perfect fit for your needs.
             </p>
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -323,8 +298,6 @@ export default function PricingPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* FAQ Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -342,7 +315,6 @@ export default function PricingPage() {
               </Link>.
             </p>
           </motion.div>
-
           <div className="space-y-6">
             {faqs.map((faq, index) => (
               <motion.div
@@ -360,8 +332,6 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
-
-      {/* CTA Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -371,19 +341,16 @@ export default function PricingPage() {
             viewport={{ once: true }}
             className="bg-gradient-to-r from-primary-600 via-blue-600 to-purple-600 rounded-3xl p-8 md:p-12 text-white text-center relative overflow-hidden"
           >
-            {/* Background elements */}
             <div className="absolute inset-0 opacity-20">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
             </div>
-            
             <div className="relative">
               <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Started?</h2>
               <p className="text-xl mb-8 text-white/90 max-w-3xl mx-auto">
                 Join thousands of companies using ResumeIT to streamline their hiring process. 
                 Start your free trial today—no credit card required.
               </p>
-              
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <motion.button
                   whileHover={{ scale: 1.05 }}

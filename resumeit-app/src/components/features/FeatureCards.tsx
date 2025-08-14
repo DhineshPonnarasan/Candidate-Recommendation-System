@@ -1,8 +1,6 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-
 const FeatureCards = () => {
   const features = [
     {
@@ -61,7 +59,6 @@ const FeatureCards = () => {
       }
     }
   ]
-
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,7 +77,6 @@ const FeatureCards = () => {
             of your recruitment process.
           </p>
         </motion.div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <motion.div
@@ -106,8 +102,6 @@ const FeatureCards = () => {
                   </li>
                 ))}
               </ul>
-              
-              {/* Action Button */}
               <div className="mt-auto">
                 {feature.actionButton.external ? (
                   <a
@@ -130,8 +124,6 @@ const FeatureCards = () => {
             </motion.div>
           ))}
         </div>
-
-        {/* Additional Enterprise Features */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -146,7 +138,6 @@ const FeatureCards = () => {
             <p className="text-lg text-gray-600 mb-8 max-w-3xl mx-auto">
               Advanced capabilities for organizations looking to scale their recruitment process
             </p>
-            
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="text-3xl mb-3">🔒</div>
@@ -170,5 +161,4 @@ const FeatureCards = () => {
     </section>
   )
 }
-
 export default FeatureCards

@@ -1,8 +1,6 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-
 const FeaturesPreview = () => {
   const features = [
     {
@@ -30,7 +28,6 @@ const FeaturesPreview = () => {
       link: '/features'
     }
   ]
-
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -49,7 +46,6 @@ const FeaturesPreview = () => {
             more accurate, and incredibly efficient.
           </p>
         </motion.div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
             <motion.div
@@ -77,7 +73,6 @@ const FeaturesPreview = () => {
             </motion.div>
           ))}
         </div>
-        
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -96,5 +91,4 @@ const FeaturesPreview = () => {
     </section>
   )
 }
-
 export default FeaturesPreview

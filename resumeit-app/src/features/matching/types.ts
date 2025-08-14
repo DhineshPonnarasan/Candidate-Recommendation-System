@@ -8,7 +8,6 @@ export interface ExperienceEntry {
   technologies: string[]
   yearsInRole?: number
 }
-
 export interface ProjectEntry {
   name: string
   category?: string
@@ -19,7 +18,6 @@ export interface ProjectEntry {
   role?: string
   teamSize?: number
 }
-
 export interface Candidate {
   id: string
   name: string

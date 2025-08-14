@@ -1,8 +1,6 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import Image from 'next/image'
-
 const CompanyLogos = () => {
   const companies = [
     { name: 'Google', logo: 'https://logo.clearbit.com/google.com' },
@@ -16,7 +14,6 @@ const CompanyLogos = () => {
     { name: 'Airbnb', logo: 'https://logo.clearbit.com/airbnb.com' },
     { name: 'Spotify', logo: 'https://logo.clearbit.com/spotify.com' },
   ]
-
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -34,7 +31,6 @@ const CompanyLogos = () => {
             Leading organizations worldwide use ResumeIT to streamline their hiring process
           </p>
         </motion.div>
-        
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 items-center justify-items-center">
           {companies.map((company, index) => (
             <motion.div
@@ -58,7 +54,6 @@ const CompanyLogos = () => {
             </motion.div>
           ))}
         </div>
-        
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -74,5 +69,4 @@ const CompanyLogos = () => {
     </section>
   )
 }
-
 export default CompanyLogos

@@ -1,31 +1,23 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ArrowRightIcon, SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
-
 const Hero = () => {
   return (
     <section className="relative bg-gradient-to-br from-primary-50 via-white to-blue-50 min-h-screen flex items-center overflow-hidden">
-      {/* Background Pattern */}
       <div className="absolute inset-0 bg-hero-pattern opacity-30"></div>
       <div className="absolute inset-0 bg-gradient-to-r from-primary-500/5 to-blue-500/5"></div>
-      
-      {/* Floating Background Elements */}
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary-200/20 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
       <div className="absolute top-40 right-10 w-72 h-72 bg-blue-200/20 rounded-full mix-blend-multiply filter blur-xl animate-float" style={{animationDelay: '2s'}}></div>
       <div className="absolute -bottom-8 left-20 w-72 h-72 bg-accent-200/20 rounded-full mix-blend-multiply filter blur-xl animate-float" style={{animationDelay: '4s'}}></div>
-      
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Left Content */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-left space-y-8"
           >
-            {/* Badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -35,8 +27,6 @@ const Hero = () => {
               <SparklesIcon className="w-4 h-4" />
               Next-Generation Recruitment Platform
             </motion.div>
-
-            {/* Main Heading */}
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight">
               <span className="text-secondary-900">Transform Your</span>{' '}
               <span className="bg-gradient-to-r from-primary-600 via-blue-600 to-primary-700 bg-clip-text text-transparent">
@@ -44,13 +34,10 @@ const Hero = () => {
               </span>{' '}
               <span className="text-secondary-900">with AI</span>
             </h1>
-            
             <p className="text-xl text-secondary-600 leading-relaxed max-w-2xl">
               Revolutionize hiring with our intelligent platform that matches the perfect candidates 
               with the right opportunities in seconds. Experience the future of recruitment today.
             </p>
-            
-            {/* Features List */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-secondary-700">
               {[
                 'AI-Powered Matching',
@@ -70,8 +57,6 @@ const Hero = () => {
                 </motion.div>
               ))}
             </div>
-            
-            {/* CTA Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -92,8 +77,6 @@ const Hero = () => {
                 Start Free Trial
               </Link>
             </motion.div>
-            
-            {/* Trust Indicators */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -114,8 +97,6 @@ const Hero = () => {
               </div>
             </motion.div>
           </motion.div>
-          
-          {/* Right Content - Interactive Resume Mockup */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -123,9 +104,7 @@ const Hero = () => {
             className="relative"
           >
             <div className="relative">
-              {/* Main Card */}
               <div className="relative bg-white rounded-3xl shadow-hard p-8 border border-secondary-200/50 backdrop-blur-sm">
-                {/* Profile Header */}
                 <div className="flex items-center space-x-4 mb-6">
                   <div className="relative">
                     <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-medium">
@@ -139,8 +118,6 @@ const Hero = () => {
                     <p className="text-sm text-secondary-500">San Francisco, CA</p>
                   </div>
                 </div>
-                
-                {/* Skills Section */}
                 <div className="mb-6">
                   <h4 className="font-semibold text-secondary-800 mb-3 flex items-center gap-2">
                     <SparklesIcon className="w-4 h-4 text-primary-500" />
@@ -171,8 +148,6 @@ const Hero = () => {
                     ))}
                   </div>
                 </div>
-                
-                {/* Experience */}
                 <div className="space-y-4">
                   <h4 className="font-semibold text-secondary-800 mb-3">Recent Experience</h4>
                   <div className="space-y-3">
@@ -194,8 +169,6 @@ const Hero = () => {
                   </div>
                 </div>
               </div>
-              
-              {/* AI Analysis Overlay */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -212,8 +185,6 @@ const Hero = () => {
                   </div>
                 </div>
               </motion.div>
-              
-              {/* Floating Analysis Indicators */}
               <motion.div
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -224,7 +195,6 @@ const Hero = () => {
                   <div className="text-sm font-medium">AI Analyzing...</div>
                 </div>
               </motion.div>
-
               <motion.div
                 animate={{ y: [0, 8, 0] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
@@ -240,5 +210,4 @@ const Hero = () => {
     </section>
   )
 }
-
 export default Hero

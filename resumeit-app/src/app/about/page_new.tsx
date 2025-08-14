@@ -1,5 +1,4 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { useState } from 'react'
@@ -15,53 +14,48 @@ import {
   ArrowRightIcon,
   CheckIcon
 } from '@heroicons/react/24/outline'
-
 const About = () => {
   const [imageErrors, setImageErrors] = useState<{[key: string]: boolean}>({})
-
   const handleImageError = (memberName: string) => {
     setImageErrors(prev => ({ ...prev, [memberName]: true }))
   }
-
   const generateInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase()
   }
-
   const team = [
     {
       name: 'Dhinesh Ponnarasan',
-      role: 'CEO & Founder',
+      role: 'Chief Executive Officer',
       image: '/Dhinesh.png',
-      bio: 'Visionary leader with 10+ years in tech and recruitment. Passionate about AI-driven solutions for talent acquisition.',
+      bio: 'Specializes in data science and model optimization, passionate about creating scalable AI-powered systems',
       linkedin: 'https://www.linkedin.com/in/dhinesh-s-p/',
       color: 'from-primary-500 to-primary-600'
     },
     {
       name: 'Raguraja Krishnan',
-      role: 'CTO',
+      role: 'Chief Technology Officer',
       image: '/Ragu.png',
-      bio: 'Technical architect with deep expertise in AI/ML systems. Built scalable platforms for Fortune 500 companies.',
+      bio: 'Expert in AI product strategy with a track record in turning complex algorithms into intuitive solutions.',
       linkedin: 'https://www.linkedin.com/in/ragurajakrishnan/',
       color: 'from-blue-500 to-blue-600'
     },
     {
       name: 'Jayasuya',
-      role: 'Head of Product',
+      role: 'Chief Operating Officer',
       image: '/Jayasurya.png',
-      bio: 'Product strategist focused on user-centric design. Expert in turning complex AI capabilities into intuitive experiences.',
+      bio: 'Focused on AI-driven software development with expertise in deep learning and automation workflows.',
       linkedin: 'https://www.linkedin.com/in/jayasurya-chinnappaudayar-murugan/',
       color: 'from-accent-500 to-accent-600'
     },
     {
       name: 'Bharath Puvichandran',
-      role: 'Head of Engineering',
+      role: 'Chief Financial Officer',
       image: '/Bharath.png',
-      bio: 'Full-stack engineering leader with expertise in scalable systems. Champion of clean code and engineering excellence.',
+      bio: 'Experienced in AI business applications and analytics, dedicated to bridging technology with real-world impact.',
       linkedin: 'https://www.linkedin.com/in/bharath-puvichandran-182092274/',
       color: 'from-emerald-500 to-emerald-600'
     }
   ]
-
   const values = [
     {
       title: 'Innovation',
@@ -92,7 +86,6 @@ const About = () => {
       bgColor: 'bg-orange-50'
     }
   ]
-
   const stats = [
     { 
       number: '50K+', 
@@ -119,7 +112,6 @@ const About = () => {
       description: 'AI-powered precision matching'
     }
   ]
-
   const timeline = [
     {
       year: '2021',
@@ -152,17 +144,13 @@ const About = () => {
       color: 'from-emerald-500 to-emerald-600'
     }
   ]
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50">
-      {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-primary-200 to-accent-200 rounded-full opacity-20 blur-3xl animate-pulse-soft"></div>
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-200 to-purple-200 rounded-full opacity-20 blur-3xl animate-bounce-gentle"></div>
         </div>
-
         <div className="max-w-7xl mx-auto relative">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -179,18 +167,15 @@ const About = () => {
               <SparklesIcon className="w-5 h-5 mr-2" />
               Powered by Advanced AI Technology
             </motion.div>
-            
             <h1 className="text-5xl md:text-7xl font-bold mb-8">
               <span className="bg-gradient-to-r from-primary-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
                 About ResumeIT
               </span>
             </h1>
-            
             <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
               We're revolutionizing recruitment with AI-powered matching that connects the right talent 
               with the right opportunities, making the hiring process smarter, faster, and fairer for everyone.
             </p>
-
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -213,8 +198,6 @@ const About = () => {
           </motion.div>
         </div>
       </section>
-
-      {/* Stats Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -248,8 +231,6 @@ const About = () => {
           </motion.div>
         </div>
       </section>
-
-      {/* Mission Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -267,7 +248,6 @@ const About = () => {
                 deserves a chance to showcase their true potential beyond traditional barriers.
               </p>
             </div>
-
             <div className="grid md:grid-cols-3 gap-8 mt-12">
               {[
                 {
@@ -305,8 +285,6 @@ const About = () => {
           </motion.div>
         </div>
       </section>
-
-      {/* Values Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -321,7 +299,6 @@ const About = () => {
               These principles guide everything we do and shape our approach to building the future of recruitment.
             </p>
           </motion.div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((value, index) => (
               <motion.div
@@ -344,8 +321,6 @@ const About = () => {
           </div>
         </div>
       </section>
-
-      {/* Team Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -360,7 +335,6 @@ const About = () => {
               Passionate experts from diverse backgrounds united by a shared vision to transform recruitment.
             </p>
           </motion.div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {team.map((member, index) => (
               <motion.div
@@ -392,11 +366,9 @@ const About = () => {
                       <SparklesIcon className="w-4 h-4 text-white" />
                     </div>
                   </div>
-                  
                   <h3 className="text-xl font-bold text-gray-900 mb-1">{member.name}</h3>
                   <p className="text-primary-600 font-semibold mb-4">{member.role}</p>
                   <p className="text-gray-600 text-sm leading-relaxed mb-6">{member.bio}</p>
-                  
                   <a
                     href={member.linkedin}
                     target="_blank"
@@ -414,8 +386,6 @@ const About = () => {
           </div>
         </div>
       </section>
-
-      {/* Timeline Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -430,12 +400,9 @@ const About = () => {
               From a simple idea to a global platform transforming how companies find talent.
             </p>
           </motion.div>
-
           <div className="max-w-4xl mx-auto">
             <div className="relative">
-              {/* Timeline line */}
               <div className="absolute left-1/2 transform -translate-x-px h-full w-0.5 bg-gradient-to-b from-primary-500 to-accent-500"></div>
-              
               {timeline.map((event, index) => (
                 <motion.div
                   key={event.year}
@@ -454,10 +421,7 @@ const About = () => {
                       <p className="text-gray-600">{event.description}</p>
                     </div>
                   </div>
-                  
-                  {/* Timeline dot */}
                   <div className="flex-shrink-0 w-6 h-6 bg-white border-4 border-primary-500 rounded-full mx-4 z-10 shadow-lg"></div>
-                  
                   <div className="flex-1"></div>
                 </motion.div>
               ))}
@@ -465,8 +429,6 @@ const About = () => {
           </div>
         </div>
       </section>
-
-      {/* Technology Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -476,11 +438,9 @@ const About = () => {
             viewport={{ once: true }}
             className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden"
           >
-            {/* Background pattern */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute top-0 left-0 w-full h-full bg-hero-pattern"></div>
             </div>
-            
             <div className="relative">
               <div className="text-center mb-12">
                 <motion.div
@@ -493,14 +453,12 @@ const About = () => {
                   <SparklesIcon className="w-5 h-5 mr-2" />
                   Advanced AI Technology
                 </motion.div>
-                
                 <h2 className="text-3xl md:text-4xl font-bold mb-6">Powered by Intelligence</h2>
                 <p className="text-lg text-gray-300 max-w-4xl mx-auto leading-relaxed">
                   Our platform uses state-of-the-art machine learning algorithms, natural language processing, 
                   and semantic analysis to understand both resumes and job descriptions at a deeper level.
                 </p>
               </div>
-              
               <div className="grid md:grid-cols-3 gap-8">
                 {[
                   {
@@ -550,8 +508,6 @@ const About = () => {
           </motion.div>
         </div>
       </section>
-
-      {/* CTA Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -561,19 +517,16 @@ const About = () => {
             viewport={{ once: true }}
             className="bg-gradient-to-r from-primary-600 via-blue-600 to-purple-600 rounded-3xl p-8 md:p-12 text-white text-center relative overflow-hidden"
           >
-            {/* Background elements */}
             <div className="absolute inset-0 opacity-20">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
             </div>
-            
             <div className="relative">
               <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Hiring?</h2>
               <p className="text-xl mb-8 text-white/90 max-w-3xl mx-auto">
                 Join thousands of companies already using ResumeIT to find the perfect candidates faster, 
                 fairer, and more efficiently than ever before.
               </p>
-              
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -591,7 +544,6 @@ const About = () => {
                   Contact Sales
                 </motion.button>
               </div>
-              
               <div className="flex flex-wrap justify-center gap-8 mt-12 text-sm text-white/80">
                 <span className="flex items-center">
                   <CheckIcon className="w-4 h-4 mr-2" />
@@ -613,5 +565,4 @@ const About = () => {
     </div>
   )
 }
-
 export default About

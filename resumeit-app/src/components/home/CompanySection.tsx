@@ -1,10 +1,7 @@
 'use client'
-
 import React from 'react'
 import Image from 'next/image'
-
 const CompanySection: React.FC = () => {
-  // 30 major companies with their logos
   const companies = [
     { name: 'Amazon', logo: 'https://logo.clearbit.com/amazon.com', careers: 'https://www.amazon.jobs/' },
     { name: 'Apple', logo: 'https://logo.clearbit.com/apple.com', careers: 'https://jobs.apple.com/' },
@@ -37,7 +34,6 @@ const CompanySection: React.FC = () => {
     { name: 'Atlassian', logo: 'https://logo.clearbit.com/atlassian.com', careers: 'https://www.atlassian.com/company/careers' },
     { name: 'ServiceNow', logo: 'https://logo.clearbit.com/servicenow.com', careers: 'https://www.servicenow.com/careers.html' }
   ]
-
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -49,8 +45,6 @@ const CompanySection: React.FC = () => {
             Join thousands of forward-thinking companies using ResumeIT to find exceptional talent faster and more efficiently.
           </p>
         </div>
-
-        {/* Company logos grid */}
         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 items-center justify-items-center opacity-70 hover:opacity-100 transition-opacity duration-300">
           {companies.slice(0, 12).map((company, index) => (
             <div
@@ -77,8 +71,6 @@ const CompanySection: React.FC = () => {
             </div>
           ))}
         </div>
-
-        {/* CTA Section */}
         <div className="mt-16 text-center bg-white rounded-2xl p-8 shadow-sm">
           <h3 className="text-2xl font-bold text-gray-900 mb-4">
             Ready to Join These Industry Leaders?
@@ -95,8 +87,6 @@ const CompanySection: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Stats section */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center">
             <div className="text-3xl font-bold text-primary-600 mb-2">98%</div>
@@ -115,5 +105,4 @@ const CompanySection: React.FC = () => {
     </section>
   )
 }
-
 export default CompanySection

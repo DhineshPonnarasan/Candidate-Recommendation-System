@@ -1,0 +1,168 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Organic brain gradient -->
+    <linearGradient id="organicBrain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7dd3fc;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#38bdf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Circuit side gradient -->
+    <linearGradient id="circuitGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60a5fa;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Border gradient -->
+    <linearGradient id="borderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3730a3;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Circuit node gradient -->
+    <linearGradient id="nodeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="brainGlow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Clip path for left half (organic brain) -->
+    <clipPath id="leftHalf">
+      <rect x="0" y="0" width="60" height="120" />
+    </clipPath>
+    
+    <!-- Clip path for right half (circuit) -->
+    <clipPath id="rightHalf">
+      <rect x="60" y="0" width="60" height="120" />
+    </clipPath>
+  </defs>
+  
+  <!-- Main brain outline -->
+  <path d="M25 55 Q20 35 35 25 Q45 15 60 20 Q75 15 85 25 Q100 35 95 55 Q100 70 90 85 Q80 95 65 90 Q55 100 45 90 Q30 95 20 80 Q15 65 25 55 Z" 
+        fill="none" stroke="url(#borderGradient)" stroke-width="4"/>
+  
+  <!-- Left half - Organic brain -->
+  <g clip-path="url(#leftHalf)">
+    <!-- Brain tissue fill -->
+    <path d="M25 55 Q20 35 35 25 Q45 15 60 20 Q60 35 60 55 Q60 75 60 90 Q55 100 45 90 Q30 95 20 80 Q15 65 25 55 Z" 
+          fill="url(#organicBrain)" filter="url(#brainGlow)"/>
+    
+    <!-- Brain fold patterns -->
+    <g stroke="url(#borderGradient)" stroke-width="2.5" fill="none" opacity="0.8">
+      <!-- Upper folds -->
+      <path d="M30 35 Q35 30 40 35 Q45 30 50 35 Q55 32 58 35"/>
+      <path d="M28 42 Q33 37 38 42 Q43 37 48 42 Q53 39 58 42"/>
+      
+      <!-- Middle folds -->
+      <path d="M25 50 Q30 45 35 50 Q40 45 45 50 Q50 47 55 50"/>
+      <path d="M27 58 Q32 53 37 58 Q42 53 47 58 Q52 55 57 58"/>
+      
+      <!-- Lower folds -->
+      <path d="M30 70 Q35 65 40 70 Q45 65 50 70 Q55 67 58 70"/>
+      <path d="M32 78 Q37 73 42 78 Q47 73 52 78 Q57 75 58 78"/>
+    </g>
+    
+    <!-- Inner brain details -->
+    <g stroke="url(#borderGradient)" stroke-width="1.5" fill="none" opacity="0.6">
+      <path d="M32 40 Q37 38 42 40"/>
+      <path d="M30 55 Q35 53 40 55"/>
+      <path d="M35 72 Q40 70 45 72"/>
+    </g>
+  </g>
+  
+  <!-- Right half - Circuit network -->
+  <g clip-path="url(#rightHalf)">
+    <!-- Circuit background -->
+    <path d="M60 20 Q75 15 85 25 Q100 35 95 55 Q100 70 90 85 Q80 95 65 90 Q60 75 60 55 Q60 35 60 20 Z" 
+          fill="rgba(30, 64, 175, 0.1)"/>
+    
+    <!-- Central circuit spine -->
+    <rect x="60" y="25" width="4" height="65" fill="url(#circuitGradient)"/>
+    
+    <!-- Circuit nodes -->
+    <g fill="url(#nodeGradient)">
+      <circle cx="75" cy="35" r="4"/>
+      <circle cx="85" cy="45" r="3.5"/>
+      <circle cx="90" cy="55" r="4"/>
+      <circle cx="85" cy="65" r="3.5"/>
+      <circle cx="75" cy="75" r="3"/>
+    </g>
+    
+    <!-- Inner circles for nodes -->
+    <g fill="rgba(255,255,255,0.8)">
+      <circle cx="75" cy="35" r="2"/>
+      <circle cx="85" cy="45" r="1.8"/>
+      <circle cx="90" cy="55" r="2"/>
+      <circle cx="85" cy="65" r="1.8"/>
+      <circle cx="75" cy="75" r="1.5"/>
+    </g>
+    
+    <!-- Circuit connections -->
+    <g stroke="url(#circuitGradient)" stroke-width="2.5" fill="none">
+      <!-- Main vertical connections -->
+      <path d="M64 30 L75 35"/>
+      <path d="M64 40 L85 45"/>
+      <path d="M64 55 L90 55"/>
+      <path d="M64 65 L85 65"/>
+      <path d="M64 75 L75 75"/>
+      
+      <!-- Horizontal connectors -->
+      <rect x="68" y="29" width="6" height="2" fill="url(#circuitGradient)"/>
+      <rect x="72" y="39" width="6" height="2" fill="url(#circuitGradient)"/>
+      <rect x="76" y="54" width="6" height="2" fill="url(#circuitGradient)"/>
+      <rect x="72" y="64" width="6" height="2" fill="url(#circuitGradient)"/>
+      <rect x="68" y="74" width="6" height="2" fill="url(#circuitGradient)"/>
+      
+      <!-- Inter-node connections -->
+      <path d="M75 39 L85 41"/>
+      <path d="M89 49 L89 51"/>
+      <path d="M85 61 L75 71"/>
+    </g>
+    
+    <!-- Additional circuit details -->
+    <g stroke="url(#circuitGradient)" stroke-width="1.5" fill="none" opacity="0.7">
+      <!-- Branch circuits -->
+      <path d="M85 35 L92 30"/>
+      <path d="M92 45 L98 42"/>
+      <path d="M92 65 L98 68"/>
+      <path d="M75 85 L82 90"/>
+      
+      <!-- Small connector nodes -->
+      <circle cx="92" cy="30" r="1.5" fill="url(#nodeGradient)"/>
+      <circle cx="98" cy="42" r="1.5" fill="url(#nodeGradient)"/>
+      <circle cx="98" cy="68" r="1.5" fill="url(#nodeGradient)"/>
+      <circle cx="82" cy="90" r="1.5" fill="url(#nodeGradient)"/>
+    </g>
+  </g>
+  
+  <!-- Central dividing line -->
+  <line x1="60" y1="20" x2="60" y2="95" stroke="url(#borderGradient)" stroke-width="3"/>
+  
+  <!-- Data flow indicators -->
+  <g opacity="0.8">
+    <!-- Left to right data flow -->
+    <circle cx="55" cy="45" r="1" fill="url(#circuitGradient)">
+      <animateTransform attributeName="transform" type="translate" values="0,0; 10,0; 0,0" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Right to left data flow -->
+    <circle cx="65" cy="65" r="1" fill="url(#organicBrain)">
+      <animateTransform attributeName="transform" type="translate" values="0,0; -10,0; 0,0" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Top and bottom connection points -->
+  <rect x="58" y="15" width="4" height="8" fill="url(#borderGradient)"/>
+  <rect x="58" y="97" width="4" height="8" fill="url(#borderGradient)"/>
+</svg>

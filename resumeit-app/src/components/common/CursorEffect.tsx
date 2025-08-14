@@ -1,42 +1,29 @@
 'use client'
-
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-
 const CursorEffect: React.FC = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [isHovering, setIsHovering] = useState(false)
   const [trails, setTrails] = useState<Array<{ x: number; y: number; id: number }>>([])
   const [isDesktop, setIsDesktop] = useState(false)
-
   useEffect(() => {
-    // Check if device supports hover and fine pointer (desktop)
     const checkDevice = () => {
       setIsDesktop(window.matchMedia('(hover: hover) and (pointer: fine)').matches)
     }
-    
     checkDevice()
     window.addEventListener('resize', checkDevice)
-    
     return () => window.removeEventListener('resize', checkDevice)
   }, [])
-
   useEffect(() => {
     if (!isDesktop) return
-
     let trailId = 0
-
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({ x: e.clientX, y: e.clientY })
-      
-      // Add trail point
       setTrails(prev => {
         const newTrail = { x: e.clientX, y: e.clientY, id: trailId++ }
         const updatedTrails = [...prev, newTrail]
         return updatedTrails.slice(-10) // Keep only last 10 points
       })
-
-      // Check if hovering over interactive elements
       const target = e.target as HTMLElement
       const isInteractive = target.tagName === 'BUTTON' || 
                            target.tagName === 'A' || 
@@ -45,25 +32,19 @@ const CursorEffect: React.FC = () => {
                            target.classList.contains('cursor-pointer')
       setIsHovering(isInteractive)
     }
-
     const handleMouseLeave = () => {
       setTrails([])
     }
-
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseleave', handleMouseLeave)
-
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseleave', handleMouseLeave)
     }
   }, [isDesktop])
-
   if (!isDesktop) return null
-
   return (
     <div className="fixed inset-0 pointer-events-none z-50 mix-blend-difference">
-      {/* Main cursor */}
       <motion.div
         className="fixed w-6 h-6 rounded-full border-2 border-white"
         style={{
@@ -80,8 +61,6 @@ const CursorEffect: React.FC = () => {
           damping: 28,
         }}
       />
-
-      {/* Cursor dot */}
       <motion.div
         className="fixed w-2 h-2 rounded-full bg-white"
         style={{
@@ -97,8 +76,6 @@ const CursorEffect: React.FC = () => {
           damping: 28,
         }}
       />
-
-      {/* Trail effect */}
       {trails.map((trail, index) => (
         <motion.div
           key={trail.id}
@@ -120,8 +97,6 @@ const CursorEffect: React.FC = () => {
           }}
         />
       ))}
-
-      {/* Hover effect */}
       {isHovering && (
         <motion.div
           className="fixed rounded-full border border-white/30"
@@ -144,5 +119,4 @@ const CursorEffect: React.FC = () => {
     </div>
   )
 }
-
 export default CursorEffect

@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+// Tailwind CSS configuration for the ResumeIt application
 module.exports = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',

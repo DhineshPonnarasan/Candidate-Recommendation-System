@@ -1,7 +1,5 @@
 'use client'
-
 import React from 'react'
-
 const FloatingCompanyIcons = () => {
   const companies = [
     {
@@ -73,7 +71,6 @@ const FloatingCompanyIcons = () => {
       animationDelay: '5s'
     }
   ]
-
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {companies.map((company, index) => (
@@ -96,13 +93,10 @@ const FloatingCompanyIcons = () => {
           </div>
         </div>
       ))}
-      
-      {/* Additional floating elements for more dynamic effect */}
       <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-primary-300 rounded-full animate-pulse opacity-40"></div>
       <div className="absolute top-3/4 right-1/4 w-2 h-2 bg-blue-300 rounded-full animate-pulse opacity-40" style={{animationDelay: '1s'}}></div>
       <div className="absolute top-1/2 left-3/4 w-4 h-4 bg-secondary-300 rounded-full animate-pulse opacity-40" style={{animationDelay: '2s'}}></div>
     </div>
   )
 }
-
 export default FloatingCompanyIcons

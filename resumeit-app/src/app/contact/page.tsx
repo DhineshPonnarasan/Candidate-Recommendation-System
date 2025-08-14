@@ -1,5 +1,4 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -18,9 +17,7 @@ import {
   UsersIcon,
   CogIcon
 } from '@heroicons/react/24/outline'
-
 type Category = 'general' | 'sales' | 'support' | 'partnership'
-
 export default function ContactPage() {
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -29,11 +26,9 @@ export default function ContactPage() {
   const [messageCount, setMessageCount] = useState(0)
   const [startTime, setStartTime] = useState<number>(() => Date.now())
   const [copied, setCopied] = useState<'email' | 'phone' | null>(null)
-
   useEffect(() => {
     setStartTime(Date.now())
   }, [])
-
   const copyToClipboard = async (text: string, type: 'email' | 'phone') => {
     try {
       await navigator.clipboard.writeText(text)
@@ -43,31 +38,24 @@ export default function ContactPage() {
       console.error('Failed to copy:', err)
     }
   }
-
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setStatus('sending')
     setError(null)
     const form = e.currentTarget
     const formData = new FormData(form)
-    
-    // Honeypot check
     if ((formData.get('website') as string)?.trim()) {
       setStatus('error')
       setError('Spam detected.')
       return
     }
-
-    // Basic bot timing guard
     if (Date.now() - startTime < 3000) {
       setStatus('error')
       setError('Please take a moment before submitting.')
       return
     }
-
     const payload = Object.fromEntries(formData.entries()) as Record<string, string>
     payload.category = category
-    
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
@@ -84,7 +72,6 @@ export default function ContactPage() {
       setError(err?.message || 'Something went wrong')
     }
   }
-
   const contactInfo = [
     {
       title: 'Office Location',
@@ -126,7 +113,6 @@ export default function ContactPage() {
       bgColor: 'bg-orange-50'
     }
   ]
-
   const categories = [
     {
       key: 'general' as Category,
@@ -157,7 +143,6 @@ export default function ContactPage() {
       color: 'from-accent-500 to-accent-600'
     }
   ]
-
   const faqs = [
     {
       question: 'How quickly do you respond?',
@@ -176,19 +161,14 @@ export default function ContactPage() {
       answer: 'We\'re always interested in strategic partnerships. Select "Partnerships" and tell us about your proposal - we\'ll get back to you quickly.'
     }
   ]
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50">
-      {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-primary-200 to-accent-200 rounded-full opacity-20 blur-3xl animate-pulse-soft"></div>
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-200 to-purple-200 rounded-full opacity-20 blur-3xl animate-bounce-gentle"></div>
         </div>
-
         <div className="max-w-7xl mx-auto relative">
-          {/* Breadcrumb */}
           <motion.nav
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -199,7 +179,6 @@ export default function ContactPage() {
             <span className="mx-2">/</span>
             <span className="text-gray-900 font-medium">Contact</span>
           </motion.nav>
-
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -215,18 +194,15 @@ export default function ContactPage() {
               <SparklesIcon className="w-5 h-5 mr-2" />
               We're Here to Help
             </motion.div>
-            
             <h1 className="text-5xl md:text-7xl font-bold mb-8">
               <span className="bg-gradient-to-r from-primary-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Get in Touch
               </span>
             </h1>
-            
             <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
               Have questions, feedback, or need support? Our team is ready to help you succeed. 
               We typically respond within 1-2 business hours.
             </p>
-
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -249,8 +225,6 @@ export default function ContactPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* Contact Information Cards */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
@@ -272,7 +246,6 @@ export default function ContactPage() {
                   {info.subContent && (
                     <p className="text-gray-600 text-sm">{info.subContent}</p>
                   )}
-                  
                   <div className="flex items-center gap-2 mt-4">
                     {info.link && (
                       <a
@@ -285,7 +258,6 @@ export default function ContactPage() {
                         <ArrowRightIcon className="w-4 h-4 ml-1" />
                       </a>
                     )}
-                    
                     {info.copyable && (
                       <button
                         onClick={() => copyToClipboard(info.copyText!, info.copyText!.includes('@') ? 'email' : 'phone')}
@@ -306,8 +278,6 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-
-      {/* Contact Form Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -322,8 +292,6 @@ export default function ContactPage() {
               Choose a category below and tell us how we can help. We'll get back to you as soon as possible.
             </p>
           </motion.div>
-
-          {/* Category Selection */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -361,10 +329,7 @@ export default function ContactPage() {
               ))}
             </div>
           </motion.div>
-
-          {/* Form and Sidebar */}
           <div className="grid lg:grid-cols-3 gap-12">
-            {/* Contact Form */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -396,7 +361,6 @@ export default function ContactPage() {
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">Company</label>
@@ -415,7 +379,6 @@ export default function ContactPage() {
                     />
                   </div>
                 </div>
-
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Subject *</label>
                   <input
@@ -426,7 +389,6 @@ export default function ContactPage() {
                     placeholder="Brief description of your inquiry"
                   />
                 </div>
-
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Message *</label>
                   <textarea
@@ -441,10 +403,7 @@ export default function ContactPage() {
                   />
                   <div className="text-sm text-gray-500 mt-2 text-right">{messageCount}/1000 characters</div>
                 </div>
-
-                {/* Honeypot */}
                 <input type="text" name="website" className="hidden" tabIndex={-1} autoComplete="off" />
-
                 <div className="mb-6">
                   <label className="flex items-start gap-3 text-sm text-gray-600 cursor-pointer">
                     <input
@@ -462,7 +421,6 @@ export default function ContactPage() {
                     </span>
                   </label>
                 </div>
-
                 <div className="flex items-center justify-between">
                   <motion.button
                     type="submit"
@@ -483,14 +441,12 @@ export default function ContactPage() {
                       </>
                     )}
                   </motion.button>
-
                   {status === 'success' && (
                     <div className="flex items-center text-success-600 font-medium">
                       <CheckIcon className="w-5 h-5 mr-2" />
                       Message sent successfully!
                     </div>
                   )}
-
                   {status === 'error' && (
                     <div className="flex items-center text-red-600 font-medium">
                       <XMarkIcon className="w-5 h-5 mr-2" />
@@ -500,8 +456,6 @@ export default function ContactPage() {
                 </div>
               </form>
             </motion.div>
-
-            {/* Sidebar */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -509,7 +463,6 @@ export default function ContactPage() {
               viewport={{ once: true }}
               className="space-y-8"
             >
-              {/* Quick Response Info */}
               <div className="bg-gradient-to-br from-primary-50 to-accent-50 rounded-2xl p-6">
                 <h3 className="font-semibold text-gray-900 mb-4">Response Times</h3>
                 <div className="space-y-3 text-sm">
@@ -527,8 +480,6 @@ export default function ContactPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Alternative Contact Methods */}
               <div className="bg-white rounded-2xl p-6 shadow-soft">
                 <h3 className="font-semibold text-gray-900 mb-4">Other Ways to Reach Us</h3>
                 <div className="space-y-4">
@@ -542,7 +493,6 @@ export default function ContactPage() {
                       <div className="text-sm text-gray-600">hello@resumeit.ai</div>
                     </div>
                   </a>
-                  
                   <a
                     href="tel:+16071234567"
                     className="flex items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -555,8 +505,6 @@ export default function ContactPage() {
                   </a>
                 </div>
               </div>
-
-              {/* Office Hours */}
               <div className="bg-white rounded-2xl p-6 shadow-soft">
                 <h3 className="font-semibold text-gray-900 mb-4">Office Hours</h3>
                 <div className="space-y-2 text-sm">
@@ -579,8 +527,6 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-
-      {/* FAQ Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -595,7 +541,6 @@ export default function ContactPage() {
               Quick answers to common questions. Can't find what you're looking for? Send us a message above.
             </p>
           </motion.div>
-
           <div className="space-y-6">
             {faqs.map((faq, index) => (
               <motion.div

@@ -1,9 +1,6 @@
-// src/components/ai-recommendation/MatchResults.tsx
 'use client'
-
 import { memo } from 'react'
 import { motion } from 'framer-motion'
-
 type MatchResult = {
   id: string
   name: string
@@ -15,13 +12,11 @@ type MatchResult = {
   summary: string
   rank: number
 }
-
 interface Props {
   results: MatchResult[]
   isLoading: boolean
   jobTitle: string
 }
-
 const scoreBadgeClasses = (score: number) => {
   if (score >= 85) return 'text-green-700 bg-green-100 border-green-200'
   if (score >= 70) return 'text-blue-700 bg-blue-100 border-blue-200'
@@ -29,7 +24,6 @@ const scoreBadgeClasses = (score: number) => {
   if (score >= 40) return 'text-orange-700 bg-orange-100 border-orange-200'
   return 'text-red-700 bg-red-100 border-red-200'
 }
-
 const normalizeLink = (url?: string) => {
   if (!url) return ''
   const trimmed = url.trim()
@@ -37,7 +31,6 @@ const normalizeLink = (url?: string) => {
   if (/^https?:\/\//i.test(trimmed)) return trimmed
   return `https://${trimmed}`
 }
-
 const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
   if (isLoading) {
     return (
@@ -51,7 +44,6 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
       </div>
     )
   }
-
   if (!results || results.length === 0) {
     return (
       <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -61,15 +53,12 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
       </div>
     )
   }
-
   const averageScore = Math.round(results.reduce((s, r) => s + (r.matchScore || 0), 0) / results.length)
   const topCandidate = results[0]
   const displayedResults = results.slice(0, 10);
   const showLimited = results.length > 10;
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Top Candidate Recommendations</h2>
@@ -86,8 +75,6 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
           <div className="text-xs text-gray-400">Similarity score</div>
         </div>
       </div>
-
-      {/* Optional summary banner */}
       <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-4 border border-primary-100 flex items-center justify-between">
         <div className="text-sm text-gray-700">
           <span className="font-medium">Top candidate:</span>{' '}
@@ -101,8 +88,6 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
           {topCandidate?.matchScore ?? 0}% match
         </div>
       </div>
-
-      {/* Cards */}
       <div className="space-y-4">
         {displayedResults.map((r, i) => {
           const safeKey = `${r.id || 'cand'}-${r.fileName || 'file'}-${r.rank ?? i}`
@@ -111,7 +96,6 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
           const displayPhone = r.phone?.trim() || 'Not specified'
           const normalizedLinkedIn = r.linkedin && r.linkedin !== 'Not specified' ? normalizeLink(r.linkedin) : ''
           const displayLinkedIn = normalizedLinkedIn ? normalizedLinkedIn : 'Not specified'
-
           return (
             <motion.div
               key={safeKey}
@@ -165,7 +149,6 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
                   <div className="text-xs text-gray-500 mt-1">Similarity</div>
                 </div>
               </div>
-
               <div className="mt-3">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full">
@@ -183,5 +166,4 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
     </div>
   )
 }
-
 export default memo(MatchResults)

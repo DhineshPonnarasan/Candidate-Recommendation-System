@@ -1,5 +1,3 @@
-// services/apiService.ts
-
 interface Candidate {
   id: string;
   name: string;
@@ -10,7 +8,6 @@ interface Candidate {
   fileName: string;
   content: string;
 }
-
 interface MatchResult {
   candidateName: string;
   matchScore: number;
@@ -18,7 +15,6 @@ interface MatchResult {
   experience: string;
   summary: string;
 }
-
 interface AnalysisSummary {
   total_candidates: number;
   average_score: number;
@@ -27,21 +23,17 @@ interface AnalysisSummary {
   processing_method: string;
   confidence: string;
 }
-
 interface SystemInfo {
   embedding_dimension: number;
   technical_keywords: number;
   analysis_version: string;
 }
-
 class APIService {
   private baseURL: string;
   private timeout: number = 30000;
-
   constructor() {
     this.baseURL = this.detectBackendURL();
   }
-
   private detectBackendURL(): string {
     if (typeof window !== 'undefined') {
       const envUrl = process.env.REACT_APP_API_URL || process.env.NEXT_PUBLIC_API_URL;
@@ -50,10 +42,8 @@ class APIService {
         return envUrl;
       }
     }
-    // Backend runs on port 8080 by default
     return 'http://localhost:8080';
   }
-
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
     try {
@@ -65,26 +55,21 @@ class APIService {
     } catch {}
     return null;
   }
-
   private setAuthToken(token: string) {
     localStorage.setItem('resumeit_user', JSON.stringify({ access_token: token }));
   }
-
   private async autoLogin() {
     let token = this.getAuthToken();
     if (!token) {
       console.log("No token found - logging in with default credentials");
       const username = process.env.REACT_APP_DEFAULT_USERNAME || "admin";
       const password = process.env.REACT_APP_DEFAULT_PASSWORD || "admin123";
-
       try {
         const res = await this.makeRequest("/api/users/login", {
           method: "POST",
           body: JSON.stringify({ username, password }),
         }, false);
-
         console.log('Auto-login response:', res);
-
         if (res?.access_token) {
           this.setAuthToken(res.access_token);
           token = res.access_token;
@@ -98,22 +83,18 @@ class APIService {
     }
     return token;
   }
-
   private async makeRequest(endpoint: string, options: RequestInit = {}, requireAuth: boolean = true): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
-
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
-
     if (requireAuth) {
       const token = await this.autoLogin();
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
     }
-
     const defaultOptions: RequestInit = {
       headers,
       mode: 'cors',
@@ -121,10 +102,8 @@ class APIService {
       signal: options.signal ?? AbortSignal.timeout(this.timeout),
       ...options,
     };
-
     try {
       const response = await fetch(url, defaultOptions);
-
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         try {
@@ -133,14 +112,12 @@ class APIService {
         } catch {}
         throw new Error(errorMessage);
       }
-
       return await response.json();
     } catch (error) {
       console.error(`API Error for ${endpoint}:`, error);
       throw error;
     }
   }
-
   async getMatching(jobDescription: string, candidates: Candidate[]): Promise<MatchResult[]> {
     try {
       const requestData = {
@@ -154,20 +131,16 @@ class APIService {
           fileName: c.fileName,
         })),
       };
-
       const response = await this.makeRequest('/api/matching/quick-match', {
         method: 'POST',
         body: JSON.stringify(requestData),
       });     
-
       const itemsRaw =
         response?.candidates ?? response?.results ?? response?.matches ??
         response?.data ?? (Array.isArray(response) ? response : null);
-
       if (!Array.isArray(itemsRaw)) {
         throw new Error('Invalid response format: expected an array of candidate results');
       }
-
       return itemsRaw.map((item: any, index: number) => ({
         candidateName: item.candidateName || item.name || `Candidate ${index + 1}`,
         matchScore: Math.round(item.matchScore ?? item.score ?? 0),
@@ -180,7 +153,6 @@ class APIService {
       throw error;
     }
   }
-
   async login(username: string, password: string): Promise<any> {
     const response = await this.makeRequest('/api/users/login', {
       method: 'POST',
@@ -191,7 +163,6 @@ class APIService {
     }
     return response;
   }
-
   async register(userData: { username: string; email: string; password: string; first_name: string; last_name: string }): Promise<any> {
     const response = await this.makeRequest('/api/users/register', {
       method: 'POST',
@@ -200,7 +171,6 @@ class APIService {
     return response;
   }
 }
-
 export const apiService = new APIService();
 export { APIService };
 export type { Candidate, MatchResult, AnalysisSummary, SystemInfo };

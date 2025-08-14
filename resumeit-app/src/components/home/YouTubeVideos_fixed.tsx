@@ -1,10 +1,7 @@
 'use client'
-
 import { useState, useEffect } from 'react'
-
 const YouTubeVideos = () => {
   const [currentVideo, setCurrentVideo] = useState(0)
-
   const videos = [
     {
       id: 'dQw4w9WgXcQ',
@@ -25,14 +22,12 @@ const YouTubeVideos = () => {
       thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg'
     }
   ]
-
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentVideo((prev) => (prev + 1) % videos.length)
     }, 5000)
     return () => clearInterval(interval)
   }, [videos.length])
-
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto">
@@ -44,9 +39,7 @@ const YouTubeVideos = () => {
             Watch how our AI-powered platform transforms the job search experience for both candidates and employers.
           </p>
         </div>
-
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Video Player */}
           <div className="relative">
             <div className="aspect-video bg-gray-800 rounded-2xl overflow-hidden shadow-2xl">
               <iframe
@@ -57,15 +50,11 @@ const YouTubeVideos = () => {
                 allowFullScreen
               />
             </div>
-            
-            {/* Video Info */}
             <div className="mt-6">
               <h3 className="text-xl font-bold mb-2">{videos[currentVideo].title}</h3>
               <p className="text-gray-300">{videos[currentVideo].description}</p>
             </div>
           </div>
-
-          {/* Video List */}
           <div className="space-y-4">
             {videos.map((video, index) => (
               <div
@@ -101,8 +90,6 @@ const YouTubeVideos = () => {
             ))}
           </div>
         </div>
-
-        {/* Video Stats */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           <div>
             <div className="text-3xl font-bold text-primary-400 mb-2">50K+</div>
@@ -121,5 +108,4 @@ const YouTubeVideos = () => {
     </section>
   )
 }
-
 export default YouTubeVideos

@@ -1,0 +1,112 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Organic brain gradient -->
+    <linearGradient id="organicCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7dd3fc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Circuit gradient -->
+    <linearGradient id="circuitCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60a5fa;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Border gradient -->
+    <linearGradient id="borderCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3730a3;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Clip paths -->
+    <clipPath id="leftCompact">
+      <rect x="0" y="0" width="32" height="64" />
+    </clipPath>
+    
+    <clipPath id="rightCompact">
+      <rect x="32" y="0" width="32" height="64" />
+    </clipPath>
+  </defs>
+  
+  <!-- Main brain outline -->
+  <path d="M12 28 Q8 18 18 12 Q24 8 32 10 Q40 8 46 12 Q56 18 52 28 Q56 35 48 44 Q42 50 34 46 Q28 52 22 46 Q14 50 8 40 Q6 32 12 28 Z" 
+        fill="none" stroke="url(#borderCompact)" stroke-width="2"/>
+  
+  <!-- Left half - Organic brain -->
+  <g clip-path="url(#leftCompact)">
+    <!-- Brain tissue -->
+    <path d="M12 28 Q8 18 18 12 Q24 8 32 10 Q32 20 32 28 Q32 40 32 46 Q28 52 22 46 Q14 50 8 40 Q6 32 12 28 Z" 
+          fill="url(#organicCompact)"/>
+    
+    <!-- Brain folds -->
+    <g stroke="url(#borderCompact)" stroke-width="1.2" fill="none" opacity="0.8">
+      <path d="M15 20 Q20 18 25 20 Q28 18 30 20"/>
+      <path d="M12 28 Q17 26 22 28 Q27 26 30 28"/>
+      <path d="M15 36 Q20 34 25 36 Q28 34 30 36"/>
+    </g>
+  </g>
+  
+  <!-- Right half - Circuit -->
+  <g clip-path="url(#rightCompact)">
+    <!-- Circuit background -->
+    <path d="M32 10 Q40 8 46 12 Q56 18 52 28 Q56 35 48 44 Q42 50 34 46 Q32 40 32 28 Q32 20 32 10 Z" 
+          fill="rgba(30, 64, 175, 0.1)"/>
+    
+    <!-- Central spine -->
+    <rect x="32" y="12" width="2" height="34" fill="url(#circuitCompact)"/>
+    
+    <!-- Circuit nodes -->
+    <g fill="url(#circuitCompact)">
+      <circle cx="40" cy="18" r="2"/>
+      <circle cx="45" cy="24" r="1.8"/>
+      <circle cx="48" cy="30" r="2"/>
+      <circle cx="45" cy="36" r="1.8"/>
+      <circle cx="40" cy="42" r="1.5"/>
+    </g>
+    
+    <!-- Node centers -->
+    <g fill="white" opacity="0.9">
+      <circle cx="40" cy="18" r="1"/>
+      <circle cx="45" cy="24" r="0.9"/>
+      <circle cx="48" cy="30" r="1"/>
+      <circle cx="45" cy="36" r="0.9"/>
+      <circle cx="40" cy="42" r="0.8"/>
+    </g>
+    
+    <!-- Circuit connections -->
+    <g stroke="url(#circuitCompact)" stroke-width="1.2" fill="none">
+      <path d="M34 16 L40 18"/>
+      <path d="M34 22 L45 24"/>
+      <path d="M34 30 L48 30"/>
+      <path d="M34 36 L45 36"/>
+      <path d="M34 42 L40 42"/>
+      
+      <!-- Inter-connections -->
+      <path d="M40 20 L45 22"/>
+      <path d="M47 26 L47 28"/>
+      <path d="M45 34 L40 40"/>
+    </g>
+    
+    <!-- Small connectors -->
+    <g fill="url(#circuitCompact)">
+      <rect x="36" y="15.5" width="3" height="1"/>
+      <rect x="38" y="21.5" width="3" height="1"/>
+      <rect x="40" y="29.5" width="3" height="1"/>
+      <rect x="38" y="35.5" width="3" height="1"/>
+      <rect x="36" y="41.5" width="3" height="1"/>
+    </g>
+  </g>
+  
+  <!-- Central dividing line -->
+  <line x1="32" y1="10" x2="32" y2="50" stroke="url(#borderCompact)" stroke-width="1.5"/>
+  
+  <!-- Data flow -->
+  <circle cx="30" cy="24" r="0.8" fill="url(#circuitCompact)">
+    <animateTransform attributeName="transform" type="translate" values="0,0; 4,0; 0,0" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Connection points -->
+  <rect x="31" y="8" width="2" height="4" fill="url(#borderCompact)"/>
+  <rect x="31" y="52" width="2" height="4" fill="url(#borderCompact)"/>
+</svg>

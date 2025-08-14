@@ -1,10 +1,7 @@
 'use client'
-
 import React from 'react'
 import Image from 'next/image'
-
 const CompanySection: React.FC = () => {
-  // 30 major companies with their logos
   const companies = [
     { name: 'Amazon', logo: 'https://logo.clearbit.com/amazon.com', careers: 'https://www.amazon.jobs/' },
     { name: 'Apple', logo: 'https://logo.clearbit.com/apple.com', careers: 'https://jobs.apple.com/' },
@@ -37,23 +34,17 @@ const CompanySection: React.FC = () => {
     { name: 'Figma', logo: 'https://logo.clearbit.com/figma.com', careers: 'https://www.figma.com/careers/' },
     { name: 'Notion', logo: 'https://logo.clearbit.com/notion.so', careers: 'https://www.notion.so/careers' },
   ]
-
   const handleCompanyClick = (careersUrl: string) => {
     window.open(careersUrl, '_blank', 'noopener,noreferrer')
   }
-
   return (
     <div>
-      {/* Companies Showcase Section */}
       <section className="py-16 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 relative overflow-hidden">
-        {/* Background decorations */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-white/10 to-blue-500/10 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500/10 to-white/10 rounded-full blur-3xl"></div>
         </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          {/* Header */}
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Trusted by Leading Companies
@@ -62,8 +53,6 @@ const CompanySection: React.FC = () => {
               Join thousands of companies that use ResumeIT to find exceptional talent faster and more efficiently.
             </p>
           </div>
-
-          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
             <div className="text-center">
               <div className="text-3xl md:text-4xl font-bold text-white mb-2">10K+</div>
@@ -82,8 +71,6 @@ const CompanySection: React.FC = () => {
               <div className="text-blue-200">Successful Hires</div>
             </div>
           </div>
-
-          {/* Companies Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
             {companies.slice(0, 15).map((company, index) => (
               <div
@@ -100,7 +87,6 @@ const CompanySection: React.FC = () => {
                       height={48}
                       className="w-full h-full object-contain"
                       onError={(e) => {
-                        // Fallback for broken images
                         const target = e.target as HTMLImageElement;
                         target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=6366f1&color=fff&size=48`;
                       }}
@@ -111,8 +97,6 @@ const CompanySection: React.FC = () => {
               </div>
             ))}
           </div>
-
-          {/* CTA Section */}
           <div className="text-center mt-16">
             <h3 className="text-2xl md:text-3xl font-bold text-white mb-6">
               Ready to Join These Industry Leaders?
@@ -134,5 +118,4 @@ const CompanySection: React.FC = () => {
     </div>
   )
 }
-
 export default CompanySection

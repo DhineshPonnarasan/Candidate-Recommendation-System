@@ -1,5 +1,4 @@
 'use client'
-
 import React, { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { 
@@ -29,7 +28,6 @@ import {
   SiAdobe,
   SiTesla
 } from 'react-icons/si'
-
 interface FloatingCompany {
   id: number
   Icon: React.ComponentType<any>
@@ -40,7 +38,6 @@ interface FloatingCompany {
   duration: number
   delay: number
 }
-
 const companies = [
   { Icon: FaGoogle, name: 'Google' },
   { Icon: FaMicrosoft, name: 'Microsoft' },
@@ -66,42 +63,32 @@ const companies = [
   { Icon: FaInstagram, name: 'Instagram' },
   { Icon: FaYoutube, name: 'YouTube' },
 ]
-
 const FloatingIcons: React.FC = () => {
   const [companyIcons, setCompanyIcons] = useState<FloatingCompany[]>([])
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
-
   const updateDimensions = useCallback(() => {
     setDimensions({
       width: window.innerWidth,
       height: window.innerHeight
     })
   }, [])
-
   useEffect(() => {
     updateDimensions()
     window.addEventListener('resize', updateDimensions)
-
     return () => {
       window.removeEventListener('resize', updateDimensions)
     }
   }, [updateDimensions])
-
   useEffect(() => {
     if (dimensions.width === 0 || dimensions.height === 0) return
-
     const generateIcons = () => {
       const newIcons: FloatingCompany[] = []
       const iconCount = Math.min(12, Math.floor(dimensions.width / 200) + 6)
-      
       for (let i = 0; i < iconCount; i++) {
         const randomCompany = companies[Math.floor(Math.random() * companies.length)]
-        
-        // Better distribution across screen
         const margin = 80
         const x = margin + Math.random() * (dimensions.width - 2 * margin)
         const y = margin + Math.random() * (dimensions.height - 2 * margin)
-        
         newIcons.push({
           id: i,
           Icon: randomCompany.Icon,
@@ -113,13 +100,10 @@ const FloatingIcons: React.FC = () => {
           delay: Math.random() * 10, // 0-10s delay
         })
       }
-      
       setCompanyIcons(newIcons)
     }
-
     generateIcons()
   }, [dimensions])
-
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
       {companyIcons.map((icon) => (
@@ -171,11 +155,8 @@ const FloatingIcons: React.FC = () => {
           </motion.div>
         </motion.div>
       ))}
-      
-      {/* Subtle gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/10 via-transparent to-purple-50/10 pointer-events-none" />
     </div>
   )
 }
-
 export default FloatingIcons

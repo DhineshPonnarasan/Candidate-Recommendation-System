@@ -1,5 +1,4 @@
 import React from 'react'
-
 const FloatingLogos: React.FC = () => {
   return (
     <section className="py-16 bg-gray-50">
@@ -14,5 +13,4 @@ const FloatingLogos: React.FC = () => {
     </section>
   )
 }
-
 export default FloatingLogos

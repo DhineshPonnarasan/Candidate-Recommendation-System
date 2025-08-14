@@ -1,7 +1,5 @@
 'use client'
-
 import { Star } from 'lucide-react'
-
 const Reviews = () => {
   const reviews = [
     {
@@ -29,7 +27,6 @@ const Reviews = () => {
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=64&h=64&fit=crop&crop=face'
     }
   ]
-
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -41,23 +38,17 @@ const Reviews = () => {
             Join thousands of professionals who've transformed their careers with ResumeIT's AI-powered job matching.
           </p>
         </div>
-
         <div className="grid md:grid-cols-3 gap-8">
           {reviews.map((review, index) => (
             <div key={review.name} className="bg-white rounded-2xl p-6 shadow-soft hover:shadow-medium transition-all duration-300">
-              {/* Rating */}
               <div className="flex items-center mb-4">
                 {[...Array(review.rating)].map((_, i) => (
                   <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
                 ))}
               </div>
-
-              {/* Review Content */}
               <p className="text-gray-700 mb-6 leading-relaxed">
                 "{review.content}"
               </p>
-
-              {/* Author */}
               <div className="flex items-center">
                 <img
                   src={review.avatar}
@@ -72,8 +63,6 @@ const Reviews = () => {
             </div>
           ))}
         </div>
-
-        {/* Overall Rating */}
         <div className="mt-12 text-center">
           <div className="inline-flex items-center px-6 py-3 bg-white rounded-2xl shadow-soft">
             <div className="flex items-center mr-4">
@@ -89,5 +78,4 @@ const Reviews = () => {
     </section>
   )
 }
-
 export default Reviews

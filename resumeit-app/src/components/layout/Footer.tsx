@@ -9,7 +9,7 @@ import {
 
 const Footer = () => {
   const productLinks = [
-    { name: 'AI Matching', href: '/ai-recommendation' },
+    { name: 'AI Recommendation', href: '/ai-recommendation' },
     { name: 'Resume Analysis', href: '/features' },
     { name: 'Candidate Scoring', href: '/features' },
     { name: 'Smart Search', href: '/features' },

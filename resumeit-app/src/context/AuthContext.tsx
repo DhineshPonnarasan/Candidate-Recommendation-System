@@ -1,7 +1,5 @@
 'use client'
-
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
-
 export type User = {
   id?: string
   username?: string
@@ -13,7 +11,6 @@ export type User = {
   avatarUrl?: string
   access_token?: string
 }
-
 type AuthContextType = {
   user: User | null
   login: (usernameOrEmail: string, password: string) => Promise<void>
@@ -22,7 +19,6 @@ type AuthContextType = {
   ready: boolean
   loading: boolean
 }
-
 type RegisterData = {
   username: string
   email: string
@@ -30,15 +26,11 @@ type RegisterData = {
   first_name: string
   last_name: string
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [ready, setReady] = useState(false)
   const [loading, setLoading] = useState(false)
-
-  // Load from localStorage and validate token
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -46,12 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (raw) {
           const userData = JSON.parse(raw)
           if (userData.access_token) {
-            // Validate token with backend
             try {
-              // TODO: Implement token validation when API supports it
-              // const { APIService } = await import('@/services/apiService')
-              // const apiService = new APIService()
-              // await apiService.validateToken()
               setUser(userData)
             } catch (error) {
               console.log('Token validation failed, clearing stored user')
@@ -66,19 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setReady(true)
     }
-
     initAuth()
   }, [])
-
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
     setLoading(true)
     try {
-      // First try to authenticate with the backend
       try {
         const { APIService } = await import('@/services/apiService')
         const apiService = new APIService()
         const response = await apiService.login(usernameOrEmail, password)
-        
         const userData: User = {
           id: response.user.id,
           username: response.user.username,
@@ -89,14 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           plan: 'Starter',
           access_token: response.access_token,
         }
-
         setUser(userData)
         localStorage.setItem('resumeit_user', JSON.stringify(userData))
         return
       } catch (backendError) {
         console.log('Backend authentication failed, trying demo login:', backendError)
-        
-        // Fallback to demo login for development
         if ((usernameOrEmail === 'admin' || usernameOrEmail === 'demo') && password === 'admin123') {
           const demoUser: User = {
             id: 'demo-1',
@@ -107,13 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             last_name: 'User',
             plan: 'Pro',
           }
-          
           setUser(demoUser)
           localStorage.setItem('resumeit_user', JSON.stringify(demoUser))
           return
         }
-        
-        // If both backend and demo fail, throw the original error
         throw backendError
       }
     } catch (error) {
@@ -123,23 +100,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }
   }, [])
-
   const register = useCallback(async (userData: RegisterData) => {
     setLoading(true)
     try {
-      // Try backend registration first
       try {
         const { APIService } = await import('@/services/apiService')
         const apiService = new APIService()
         await apiService.register(userData)
-        
-        // After successful registration, log the user in
         await login(userData.username, userData.password)
         return
       } catch (backendError) {
         console.log('Backend registration failed, using demo mode:', backendError)
-        
-        // Fallback to demo registration
         const demoUser: User = {
           id: `demo-${Date.now()}`,
           username: userData.username,
@@ -149,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           last_name: userData.last_name,
           plan: 'Starter',
         }
-        
         setUser(demoUser)
         localStorage.setItem('resumeit_user', JSON.stringify(demoUser))
       }
@@ -160,14 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }
   }, [login])
-
   const logout = useCallback(() => {
     setUser(null)
     try { localStorage.removeItem('resumeit_user') } catch {}
   }, [])
-
   const value = useMemo(() => ({ user, login, register, logout, ready, loading }), [user, ready, loading, login, register, logout])
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }export function useAuth() {
   const ctx = useContext(AuthContext)

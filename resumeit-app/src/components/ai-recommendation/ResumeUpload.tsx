@@ -1,23 +1,17 @@
 'use client'
-
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
-
 interface ResumeUploadProps {
   uploadedResumes?: File[]
   onResumeUpload: (files: File[]) => void
   onRemoveResume: (index: number) => void
 }
-
 const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: ResumeUploadProps) => {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [processingFiles, setProcessingFiles] = useState<string[]>([])
-
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
     setUploadError(null)
-    
-    // Handle rejected files
     if (rejectedFiles.length > 0) {
       const rejectedReasons = rejectedFiles.map(file => {
         const errors = file.errors.map((error: any) => error.message).join(', ')
@@ -25,11 +19,8 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
       })
       setUploadError(`Some files were rejected: ${rejectedReasons.join('; ')}`)
     }
-    
-    // Filter for supported file types and validate
     const supportedFiles: File[] = []
     const unsupportedFiles: string[] = []
-    
     acceptedFiles.forEach(file => {
       const type = file.type
       const name = file.name.toLowerCase()
@@ -43,9 +34,7 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
         name.endsWith('.doc') ||
         name.endsWith('.docx')
       )
-      
       if (isSupported) {
-        // Check file size (10MB limit)
         if (file.size > 10 * 1024 * 1024) {
           unsupportedFiles.push(`${file.name} (too large - max 10MB)`)
         } else {
@@ -55,25 +44,18 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
         unsupportedFiles.push(`${file.name} (unsupported format)`)
       }
     })
-    
     if (unsupportedFiles.length > 0) {
       setUploadError(`Unsupported files: ${unsupportedFiles.join(', ')}. Please upload PDF, DOC, DOCX, or TXT files only.`)
     }
-    
     if (supportedFiles.length > 0) {
-      // Check for duplicates
       const existingNames = uploadedResumes.map(f => f.name)
       const newFiles = supportedFiles.filter(file => !existingNames.includes(file.name))
       const duplicateFiles = supportedFiles.filter(file => existingNames.includes(file.name))
-      
       if (duplicateFiles.length > 0) {
         setUploadError(`Duplicate files skipped: ${duplicateFiles.map(f => f.name).join(', ')}`)
       }
-      
       if (newFiles.length > 0) {
         setProcessingFiles(newFiles.map(f => f.name))
-        
-        // Simulate processing time for user feedback
         setTimeout(() => {
           onResumeUpload(newFiles)
           setProcessingFiles([])
@@ -81,7 +63,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
       }
     }
   }, [onResumeUpload, uploadedResumes])
-
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
     accept: {
@@ -94,7 +75,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
     maxSize: 10 * 1024 * 1024, // 10MB limit
     maxFiles: 20 // Reasonable limit
   })
-
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -102,7 +82,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
   }
-
   const getFileIcon = (filename: string): string => {
     const ext = filename.split('.').pop()?.toLowerCase()
     switch (ext) {
@@ -113,14 +92,12 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
       default: return '📄'
     }
   }
-
   const getFileStatusColor = (filename: string): string => {
     if (processingFiles.includes(filename)) {
       return 'border-blue-300 bg-blue-50'
     }
     return 'border-gray-200 bg-gray-50'
   }
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -134,8 +111,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
           )}
         </div>
       </div>
-
-      {/* Enhanced Dropzone */}
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
@@ -168,8 +143,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
           </div>
         </div>
       </div>
-
-      {/* Error Display */}
       {uploadError && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -191,8 +164,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
           </button>
         </motion.div>
       )}
-
-      {/* Processing Indicator */}
       {processingFiles.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -207,15 +178,12 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
           </div>
         </motion.div>
       )}
-
-      {/* Uploaded Files List */}
       {uploadedResumes.length > 0 && (
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-gray-900">Uploaded Files:</h3>
             <button
               onClick={() => {
-                // Clear all files
                 for (let i = uploadedResumes.length - 1; i >= 0; i--) {
                   onRemoveResume(i)
                 }
@@ -225,7 +193,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
               Clear All
             </button>
           </div>
-          
           <div className="space-y-2 max-h-64 overflow-y-auto">
             <AnimatePresence>
               {uploadedResumes.map((file, index) => (
@@ -250,7 +217,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
                       </div>
                     </div>
                   </div>
-                  
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     <span className="text-sm text-gray-500">#{index + 1}</span>
                     <button
@@ -269,8 +235,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
           </div>
         </div>
       )}
-
-      {/* Enhanced Upload Guidelines */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
           💡 AI Analysis Guidelines
@@ -297,7 +261,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
             </ul>
           </div>
         </div>
-        
         <div className="mt-4 p-3 bg-white rounded border border-blue-200">
           <p className="text-sm text-blue-700">
             <strong>📋 Example:</strong> Upload "john_smith_resume.pdf" containing "Jane Doe" in the header 
@@ -305,8 +268,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
           </p>
         </div>
       </div>
-
-      {/* File Format Help */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
           📄 Supported File Formats
@@ -316,28 +277,28 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
             <span className="text-lg">📄</span>
             <div>
               <p className="font-medium">PDF</p>
-              <p className="text-gray-600 text-xs">Best quality</p>
+              <p className="text-gray-600 text-xs">PDF</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-lg">📝</span>
             <div>
               <p className="font-medium">DOCX</p>
-              <p className="text-gray-600 text-xs">Good quality</p>
+              <p className="text-gray-600 text-xs">WORD</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-lg">📝</span>
             <div>
               <p className="font-medium">DOC</p>
-              <p className="text-gray-600 text-xs">Legacy format</p>
+              <p className="text-gray-600 text-xs">DOCS</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-lg">📋</span>
             <div>
               <p className="font-medium">TXT</p>
-              <p className="text-gray-600 text-xs">Plain text</p>
+              <p className="text-gray-600 text-xs">TEXT</p>
             </div>
           </div>
         </div>
@@ -345,8 +306,6 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
           💡 <strong>Tip:</strong> PDF files generally provide the best text extraction results for AI analysis.
         </p>
       </div>
-
-      {/* Quick Stats */}
       {uploadedResumes.length > 0 && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <h4 className="font-semibold text-green-900 mb-2">📊 Upload Summary</h4>
@@ -377,5 +336,4 @@ const ResumeUpload = ({ uploadedResumes = [], onResumeUpload, onRemoveResume }: 
     </div>
   )
 }
-
 export default ResumeUpload

@@ -1,7 +1,5 @@
 'use client'
-
 import { motion } from 'framer-motion'
-
 const FeaturesHero = () => {
   return (
     <section className="bg-gradient-to-br from-primary-600 to-blue-700 text-white py-20">
@@ -26,5 +24,4 @@ const FeaturesHero = () => {
     </section>
   )
 }
-
 export default FeaturesHero

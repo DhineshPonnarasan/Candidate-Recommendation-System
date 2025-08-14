@@ -1,5 +1,4 @@
 'use client'
-
 import { motion } from 'framer-motion'
 import { 
   SparklesIcon,
@@ -11,7 +10,6 @@ import {
   CpuChipIcon,
   ClockIcon
 } from '@heroicons/react/24/outline'
-
 const ContentSection = () => {
   const features = [
     {
@@ -69,18 +67,15 @@ const ContentSection = () => {
       iconColor: "text-emerald-600"
     }
   ]
-
   const stats = [
     { number: "50K+", label: "Successful Placements", icon: <UsersIcon className="w-6 h-6" /> },
     { number: "98%", label: "Match Accuracy", icon: <SparklesIcon className="w-6 h-6" /> },
     { number: "2.5x", label: "Faster Hiring", icon: <ClockIcon className="w-6 h-6" /> },
     { number: "500+", label: "Partner Companies", icon: <ChartBarIcon className="w-6 h-6" /> }
   ]
-
   return (
     <section className="py-24 bg-gradient-to-br from-secondary-50 via-white to-primary-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -102,8 +97,6 @@ const ContentSection = () => {
             Experience the most advanced recruitment technology designed to connect talent with opportunity faster and more accurately than ever before.
           </p>
         </motion.div>
-
-        {/* Stats Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -128,8 +121,6 @@ const ContentSection = () => {
             </motion.div>
           ))}
         </motion.div>
-
-        {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <motion.div
@@ -141,31 +132,22 @@ const ContentSection = () => {
               className="group relative"
             >
               <div className="relative bg-white rounded-3xl p-8 shadow-soft hover:shadow-medium transition-all duration-300 border border-secondary-200/50 hover:border-primary-200 h-full">
-                {/* Background Gradient */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 rounded-3xl transition-opacity duration-300`}></div>
-                
-                {/* Icon */}
                 <div className={`inline-flex items-center justify-center w-16 h-16 ${feature.bgColor} rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   <div className={feature.iconColor}>
                     {feature.icon}
                   </div>
                 </div>
-
-                {/* Content */}
                 <h3 className="text-xl font-bold text-secondary-900 mb-4 group-hover:text-primary-600 transition-colors duration-300">
                   {feature.title}
                 </h3>
                 <p className="text-secondary-600 leading-relaxed mb-6">
                   {feature.description}
                 </p>
-
-                {/* Stats Badge */}
                 <div className={`inline-flex items-center gap-2 ${feature.bgColor} ${feature.iconColor} px-4 py-2 rounded-xl text-sm font-semibold`}>
                   <div className="w-2 h-2 bg-current rounded-full"></div>
                   {feature.stats}
                 </div>
-
-                {/* Hover Effect */}
                 <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                   <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary-500/5 to-blue-500/5"></div>
                 </div>
@@ -173,8 +155,6 @@ const ContentSection = () => {
             </motion.div>
           ))}
         </div>
-
-        {/* CTA Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -183,9 +163,7 @@ const ContentSection = () => {
           className="text-center mt-20"
         >
           <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-3xl p-12 text-white relative overflow-hidden">
-            {/* Background Pattern */}
             <div className="absolute inset-0 bg-hero-pattern opacity-10"></div>
-            
             <div className="relative z-10">
               <h3 className="text-3xl md:text-4xl font-bold mb-4">
                 Ready to Transform Your Hiring Process?
@@ -216,5 +194,4 @@ const ContentSection = () => {
     </section>
   )
 }
-
 export default ContentSection

@@ -1,0 +1,201 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main brain gradient - intelligent blue tones -->
+    <linearGradient id="intelligentBrain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#93c5fd;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Neural activity gradient -->
+    <linearGradient id="neuralActivity" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0891b2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0e7490;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Intelligence spark gradient -->
+    <linearGradient id="intelligenceSpark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Thought process gradient -->
+    <linearGradient id="thoughtProcess" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:0.8" />
+    </linearGradient>
+    
+    <!-- Advanced glow effect -->
+    <filter id="intelligentGlow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Inner neural glow -->
+    <filter id="neuralGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Thinking particles filter -->
+    <filter id="sparkle">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Main brain structure -->
+  <path d="M25 55 Q20 35 35 25 Q45 15 60 20 Q75 15 85 25 Q100 35 95 55 Q100 70 90 85 Q80 95 65 90 Q55 100 45 90 Q30 95 20 80 Q15 65 25 55 Z" 
+        fill="url(#intelligentBrain)" filter="url(#intelligentGlow)"/>
+  
+  <!-- Brain hemisphere separation with neural pathway -->
+  <path d="M60 20 Q60 35 60 55 Q60 75 65 90" stroke="rgba(255,255,255,0.4)" stroke-width="3" fill="none"/>
+  <path d="M58 25 Q58 40 58 60 Q58 80 63 90" stroke="url(#neuralActivity)" stroke-width="1" fill="none" opacity="0.8"/>
+  
+  <!-- Left hemisphere - logical processing areas -->
+  <g opacity="0.9">
+    <!-- Frontal lobe patterns -->
+    <path d="M30 35 Q35 30 40 35 Q45 30 50 35 Q55 32 58 35" stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none"/>
+    <path d="M28 42 Q33 37 38 42 Q43 37 48 42 Q53 39 58 42" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+    
+    <!-- Temporal lobe -->
+    <path d="M25 50 Q30 45 35 50 Q40 45 45 50 Q50 47 55 50" stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none"/>
+    <path d="M23 57 Q28 52 33 57 Q38 52 43 57 Q48 54 53 57" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+    
+    <!-- Occipital lobe -->
+    <path d="M30 70 Q35 65 40 70 Q45 65 50 70 Q55 67 58 70" stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none"/>
+    <path d="M28 77 Q33 72 38 77 Q43 72 48 77 Q53 74 58 77" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+  </g>
+  
+  <!-- Right hemisphere - creative processing areas -->
+  <g opacity="0.9">
+    <!-- Frontal lobe patterns -->
+    <path d="M62 35 Q67 30 72 35 Q77 30 82 35 Q87 32 90 35" stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none"/>
+    <path d="M62 42 Q67 37 72 42 Q77 37 82 42 Q87 39 90 42" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+    
+    <!-- Temporal lobe -->
+    <path d="M65 50 Q70 45 75 50 Q80 45 85 50 Q90 47 95 50" stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none"/>
+    <path d="M67 57 Q72 52 77 57 Q82 52 87 57 Q92 54 97 57" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+    
+    <!-- Occipital lobe -->
+    <path d="M62 70 Q67 65 72 70 Q77 65 82 70 Q87 67 90 70" stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none"/>
+    <path d="M62 77 Q67 72 72 77 Q77 72 82 77 Q87 74 90 77" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+  </g>
+  
+  <!-- Advanced neural network -->
+  <g filter="url(#neuralGlow)">
+    <!-- Primary neural nodes -->
+    <circle cx="35" cy="40" r="4" fill="url(#neuralActivity)"/>
+    <circle cx="50" cy="30" r="3.5" fill="url(#neuralActivity)"/>
+    <circle cx="70" cy="30" r="3.5" fill="url(#neuralActivity)"/>
+    <circle cx="85" cy="40" r="4" fill="url(#neuralActivity)"/>
+    
+    <!-- Secondary layer -->
+    <circle cx="40" cy="55" r="3" fill="url(#neuralActivity)"/>
+    <circle cx="60" cy="45" r="5" fill="url(#neuralActivity)"/>
+    <circle cx="80" cy="55" r="3" fill="url(#neuralActivity)"/>
+    
+    <!-- Deeper processing nodes -->
+    <circle cx="35" cy="70" r="2.5" fill="url(#neuralActivity)"/>
+    <circle cx="50" cy="75" r="3" fill="url(#neuralActivity)"/>
+    <circle cx="70" cy="75" r="3" fill="url(#neuralActivity)"/>
+    <circle cx="85" cy="70" r="2.5" fill="url(#neuralActivity)"/>
+  </g>
+  
+  <!-- Neural connections with intelligence flow -->
+  <g stroke="url(#neuralActivity)" stroke-width="1.5" fill="none" opacity="0.8">
+    <!-- Cross-hemisphere connections -->
+    <path d="M35 40 L50 30"/>
+    <path d="M50 30 L70 30"/>
+    <path d="M70 30 L85 40"/>
+    
+    <!-- Vertical processing chains -->
+    <path d="M35 40 L40 55"/>
+    <path d="M40 55 L35 70"/>
+    <path d="M85 40 L80 55"/>
+    <path d="M80 55 L85 70"/>
+    
+    <!-- Central processing hub -->
+    <path d="M40 55 L60 45"/>
+    <path d="M60 45 L80 55"/>
+    <path d="M50 30 L60 45"/>
+    <path d="M70 30 L60 45"/>
+    
+    <!-- Deep thought connections -->
+    <path d="M40 55 L50 75"/>
+    <path d="M60 45 L50 75"/>
+    <path d="M60 45 L70 75"/>
+    <path d="M80 55 L70 75"/>
+  </g>
+  
+  <!-- Intelligence sparks and thought bubbles -->
+  <g fill="url(#intelligenceSpark)" filter="url(#sparkle)">
+    <circle cx="45" cy="25" r="1.5">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="75" cy="25" r="1.5">
+      <animate attributeName="opacity" values="1;0.3;1" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="25" cy="45" r="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="95" cy="45" r="1">
+      <animate attributeName="opacity" values="1;0.5;1" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Thought process visualization -->
+  <g stroke="url(#thoughtProcess)" stroke-width="1" fill="none" opacity="0.6">
+    <path d="M30 25 Q40 20 50 25">
+      <animate attributeName="stroke-dasharray" values="0,100;50,50;100,0" dur="3s" repeatCount="indefinite"/>
+    </path>
+    <path d="M70 25 Q80 20 90 25">
+      <animate attributeName="stroke-dasharray" values="100,0;50,50;0,100" dur="3s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- Intelligence indicators -->
+  <g fill="white" opacity="0.9">
+    <circle cx="45" cy="40" r="1"/>
+    <circle cx="75" cy="40" r="1"/>
+  </g>
+  
+  <!-- Central consciousness core -->
+  <circle cx="60" cy="45" r="2" fill="white" opacity="0.8">
+    <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Data processing streams -->
+  <g stroke="url(#neuralActivity)" stroke-width="0.8" fill="none" opacity="0.7">
+    <path d="M20 60 Q30 58 40 60">
+      <animate attributeName="stroke-dasharray" values="0,20;10,10;20,0" dur="2s" repeatCount="indefinite"/>
+    </path>
+    <path d="M80 60 Q90 58 100 60">
+      <animate attributeName="stroke-dasharray" values="20,0;10,10;0,20" dur="2s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- Memory storage indicators -->
+  <g fill="url(#intelligenceSpark)" opacity="0.8">
+    <rect x="32" y="82" width="2" height="6" rx="1"/>
+    <rect x="36" y="80" width="2" height="8" rx="1"/>
+    <rect x="40" y="78" width="2" height="10" rx="1"/>
+    
+    <rect x="78" y="82" width="2" height="6" rx="1"/>
+    <rect x="82" y="80" width="2" height="8" rx="1"/>
+    <rect x="86" y="78" width="2" height="10" rx="1"/>
+  </g>
+</svg>

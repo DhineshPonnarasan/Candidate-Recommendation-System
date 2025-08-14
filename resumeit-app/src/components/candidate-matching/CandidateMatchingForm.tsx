@@ -1,14 +1,11 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { parseResume } from '@/utils/resumeParser';
 import { resumeService, type CandidateData } from '@/services/resumeService';
-
 import ResumeUpload from './ResumeUpload';
 import JobDescriptionInput from './JobDescriptionInput';
 import MatchResults from './MatchResults';
-
 import {
   calculateSemanticSimilarity,
   extractContactInfoFromText,
@@ -17,7 +14,6 @@ import {
   extractSkillsBasic,
   generateCandidateSummary,
 } from '@/features/matching/utils/aiUtils';
-
 import {
   DocumentTextIcon,
   CloudArrowUpIcon,
@@ -26,7 +22,6 @@ import {
   ExclamationTriangleIcon,
   CpuChipIcon,
 } from '@heroicons/react/24/outline';
-
 type Candidate = {
   id: string;
   name: string;
@@ -39,7 +34,6 @@ type Candidate = {
   fileName: string;
   content: string;
 };
-
 const AIRecommendationForm = () => {
   const [jobDescription, setJobDescription] = useState('');
   const [uploadedResumes, setUploadedResumes] = useState<File[]>([]);
@@ -49,7 +43,6 @@ const AIRecommendationForm = () => {
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [useBackend, setUseBackend] = useState(true);
   const [processingStep, setProcessingStep] = useState('');
-
   useEffect(() => {
     const checkBackendConnection = async () => {
       try {
@@ -65,52 +58,38 @@ const AIRecommendationForm = () => {
         setUseBackend(false);
       }
     };
-    
     checkBackendConnection();
   }, []);
-
   const handleJobDescriptionChange = (v: string) => setJobDescription(v);
   const handleResumeUpload = (files: File[]) => setUploadedResumes(prev => [...prev, ...files]);
-
   const removeResume = (index: number) => {
     const newFiles = [...uploadedResumes];
     newFiles.splice(index, 1);
     setUploadedResumes(newFiles);
-
     if (candidates.length > 0) {
       const newCands = [...candidates];
       newCands.splice(index, 1);
       setCandidates(newCands);
     }
   };
-
   const generateCandidateMatches = async () => {
     if (!jobDescription.trim() || uploadedResumes.length === 0) return;
-
     setIsAnalyzing(true);
     setCandidates([]);
     setProcessingStep('Processing resumes...');
-
     try {
       const parsed: Candidate[] = [];
-
       for (let i = 0; i < uploadedResumes.length; i++) {
         const file = uploadedResumes[i];
         setProcessingStep(`Processing ${file.name} (${i + 1}/${uploadedResumes.length})`);
-
         try {
           let candidateData: Candidate;
-
           if (useBackend && apiStatus === 'connected') {
-            // Try backend API first
             setProcessingStep(`Uploading ${file.name} to server...`);
             try {
               const backendResult = await resumeService.uploadResume(file);
-              
-              // Convert backend result to our Candidate format
               setProcessingStep(`Calculating similarity for ${file.name}`);
               const similarity = await calculateSemanticSimilarity(jobDescription, backendResult.resume_text);
-              
               candidateData = {
                 id: `cand_${i}_${Date.now()}`,
                 name: backendResult.name || extractNameFromFilename(file.name),
@@ -134,22 +113,17 @@ const AIRecommendationForm = () => {
                 fileName: file.name,
                 content: backendResult.resume_text,
               };
-              
               console.log(`Backend processing successful for ${file.name}`);
             } catch (backendError) {
               console.warn(`Backend processing failed for ${file.name}, falling back to client-side:`, backendError);
-              // Fall back to client-side processing
               candidateData = await processResumeClientSide(file, i, jobDescription);
             }
           } else {
-            // Use client-side processing
             candidateData = await processResumeClientSide(file, i, jobDescription);
           }
-
           parsed.push(candidateData);
         } catch (e) {
           console.error(`Error processing ${file.name}:`, e);
-          
           const fallbackName = extractNameFromFilename(file.name);
           parsed.push({
             id: `cand_${i}_${Date.now()}`,
@@ -165,10 +139,7 @@ const AIRecommendationForm = () => {
           });
         }
       }
-
-      // Sort by similarity DESC
       parsed.sort((a, b) => b.similarity - a.similarity);
-
       setCandidates(parsed);
       setAnalysisComplete(true);
       setProcessingStep('');
@@ -179,19 +150,13 @@ const AIRecommendationForm = () => {
       setIsAnalyzing(false);
     }
   };
-
-  // Helper function for client-side processing (original logic)
   const processResumeClientSide = async (file: File, index: number, jobDesc: string): Promise<Candidate> => {
     console.log(`Client-side processing for: ${file.name}, type: ${file.type}, size: ${file.size}`);
     const resumeText = await parseResume(file);
-
     console.log(`Extracted text length: ${resumeText.length} characters`);
-    
     if (!resumeText || resumeText.length === 0) {
       console.warn(`No text extracted from ${file.name}`);
-      
       const fallbackName = extractNameFromFilename(file.name);
-      
       let errorMessage = `Unable to extract text from "${file.name}". `;
       if (file.type.includes('pdf')) {
         errorMessage += 'This PDF may be image-based, password-protected, or corrupted. Try converting it to a text-based PDF or DOCX format.';
@@ -200,7 +165,6 @@ const AIRecommendationForm = () => {
       } else {
         errorMessage += 'The file format may not be supported or the file may be corrupted.';
       }
-      
       return {
         id: `cand_${index}_${Date.now()}`,
         name: fallbackName || 'Unknown Candidate',
@@ -214,23 +178,14 @@ const AIRecommendationForm = () => {
         content: '',
       };
     }
-
-    // Extract information
     const contact = extractContactInfoFromText(resumeText);
     let candidateName = extractCandidateNameFromText(resumeText);
-
-    // Fallback to filename if needed
     if (!candidateName || candidateName === 'Unknown Candidate' || candidateName.length < 3) {
       candidateName = extractNameFromFilename(file.name);
     }
-
     const skills = extractSkillsBasic(resumeText);
-
-    // Calculate semantic similarity
     setProcessingStep(`Calculating similarity for ${file.name}`);
     const sim = await calculateSemanticSimilarity(jobDesc, resumeText);
-
-    // Generate AI-style summary
     const aiSummary = generateCandidateSummary({
       name: candidateName,
       resumeText: resumeText,
@@ -239,7 +194,6 @@ const AIRecommendationForm = () => {
       contact: contact,
       skills: skills,
     });
-
     return {
       id: `cand_${index}_${Date.now()}`,
       name: candidateName,
@@ -253,8 +207,6 @@ const AIRecommendationForm = () => {
       content: resumeText,
     };
   };
-
-  // Adapt to MatchResults shape
   const matchResults = candidates.map((c, idx) => {
     const score = Math.round((c.similarity || 0) * 100);
     return {
@@ -269,10 +221,8 @@ const AIRecommendationForm = () => {
       rank: idx + 1,
     };
   });
-
   return (
     <div className="w-full max-w-6xl mx-auto">
-      {/* Status */}
       {apiStatus !== 'checking' && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -309,8 +259,6 @@ const AIRecommendationForm = () => {
           </div>
         </motion.div>
       )}
-
-      {/* Inputs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <motion.div
           initial={{ opacity: 0, x: -30 }}
@@ -331,7 +279,6 @@ const AIRecommendationForm = () => {
             <JobDescriptionInput value={jobDescription} onChange={handleJobDescriptionChange} />
           </div>
         </motion.div>
-
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
@@ -356,8 +303,6 @@ const AIRecommendationForm = () => {
           </div>
         </motion.div>
       </div>
-
-      {/* Analyze */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -385,7 +330,6 @@ const AIRecommendationForm = () => {
             </span>
           )}
         </button>
-
         {(jobDescription.trim() === '' || uploadedResumes.length === 0) && (
           <p className="mt-3 text-sm text-gray-500">
             {!jobDescription.trim() && uploadedResumes.length === 0
@@ -396,8 +340,6 @@ const AIRecommendationForm = () => {
           </p>
         )}
       </motion.div>
-
-      {/* Progress */}
       {isAnalyzing && processingStep && (
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
@@ -417,8 +359,6 @@ const AIRecommendationForm = () => {
           </div>
         </motion.div>
       )}
-
-      {/* Results */}
       {analysisComplete && matchResults.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -435,7 +375,6 @@ const AIRecommendationForm = () => {
               <p className="text-gray-600">Candidates ranked by similarity</p>
             </div>
           </div>
-
           <MatchResults
             results={matchResults}
             isLoading={isAnalyzing}
@@ -443,8 +382,6 @@ const AIRecommendationForm = () => {
           />
         </motion.div>
       )}
-
-      {/* Empty */}
       {analysisComplete && matchResults.length === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -464,5 +401,4 @@ const AIRecommendationForm = () => {
     </div>
   );
 };
-
 export default AIRecommendationForm;

@@ -1,5 +1,4 @@
 'use client'
-
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
@@ -25,12 +24,10 @@ import {
 } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-
 export default function FeaturesPage() {
   const router = useRouter()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('external')
-
   const featureButtons = [
     {
       title: 'AI-Powered Resume Matching',
@@ -94,7 +91,6 @@ export default function FeaturesPage() {
       category: 'Organization'
     }
   ]
-
   const internalFeatures = [
     {
       title: 'AI Interview Preparation',
@@ -149,7 +145,6 @@ export default function FeaturesPage() {
       category: 'Learning'
     }
   ]
-
   const additionalFeatures = [
     {
       icon: <UserGroupIcon className="w-6 h-6" />,
@@ -176,14 +171,12 @@ export default function FeaturesPage() {
       benefits: ['End-to-end encryption', 'GDPR compliant', 'Data ownership']
     }
   ]
-
   const stats = [
     { number: '100K+', label: 'Active Users', color: 'text-blue-600', icon: <UserGroupIcon className="w-6 h-6" /> },
     { number: '97%', label: 'Success Rate', color: 'text-green-600', icon: <TrophyIcon className="w-6 h-6" /> },
     { number: '24/7', label: 'AI Support', color: 'text-purple-600', icon: <ClockIcon className="w-6 h-6" /> },
     { number: '15M+', label: 'Jobs Analyzed', color: 'text-orange-600', icon: <ChartBarIcon className="w-6 h-6" /> }
   ]
-
   const handleFeatureClick = (feature: any) => {
     if (feature.isInternal) {
       if (user) {
@@ -195,15 +188,11 @@ export default function FeaturesPage() {
       window.open(feature.url, '_blank', 'noopener,noreferrer')
     }
   }
-
   const currentFeatures = activeTab === 'external' ? featureButtons : internalFeatures
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
-      {/* Enhanced Hero Section */}
       <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5"></div>
-        
         <div className="max-w-7xl mx-auto relative">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -215,19 +204,15 @@ export default function FeaturesPage() {
               <SparklesIcon className="w-5 h-5 mr-2" />
               Next-Gen Career Platform
             </div>
-            
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-6">
               Comprehensive Career
               <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Success Platform
               </span>
             </h1>
-            
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed">
               Everything you need to accelerate your career - from AI-powered resume optimization to interview preparation, skill assessments, and job matching.
             </p>
-            
-            {/* Enhanced Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
               {stats.map((stat, index) => (
                 <motion.div
@@ -250,8 +235,6 @@ export default function FeaturesPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* Feature Tabs */}
       <section className="py-8 px-4 sm:px-6 lg:px-8 bg-white border-b">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-center">
@@ -280,8 +263,6 @@ export default function FeaturesPage() {
           </div>
         </div>
       </section>
-
-      {/* Main Features Grid */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -301,7 +282,6 @@ export default function FeaturesPage() {
               }
             </p>
           </motion.div>
-
           <motion.div
             key={activeTab}
             initial={{ opacity: 0 }}
@@ -317,25 +297,20 @@ export default function FeaturesPage() {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 className={`${feature.bgColor} rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group border border-gray-100 relative overflow-hidden`}
               >
-                {/* Category Badge */}
                 <div className="absolute top-4 right-4">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/70 text-gray-600">
                     {feature.category}
                   </span>
                 </div>
-                
                 <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-xl text-white mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                   {feature.icon}
                 </div>
-                
                 <h3 className="text-xl font-bold text-gray-900 mb-3">
                   {feature.title}
                 </h3>
-                
                 <p className="text-gray-600 mb-6 leading-relaxed">
                   {feature.description}
                 </p>
-                
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-sm font-semibold text-gray-700 bg-white/70 px-3 py-1 rounded-full">
                     {feature.stats}
@@ -346,7 +321,6 @@ export default function FeaturesPage() {
                     ))}
                   </div>
                 </div>
-                
                 <button
                   onClick={() => handleFeatureClick(feature)}
                   className={`inline-flex items-center justify-center w-full px-6 py-3 bg-gradient-to-r ${feature.gradient} text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-300 group-hover:scale-105`}
@@ -359,8 +333,6 @@ export default function FeaturesPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* Additional Features Grid */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-gray-100 to-blue-50">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -376,7 +348,6 @@ export default function FeaturesPage() {
               Discover the full range of features that make ResumeIT the most comprehensive career platform available.
             </p>
           </motion.div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             {additionalFeatures.map((feature, index) => (
               <motion.div
@@ -408,8 +379,6 @@ export default function FeaturesPage() {
           </div>
         </div>
       </section>
-
-      {/* Enhanced CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -422,14 +391,12 @@ export default function FeaturesPage() {
               <TrophyIcon className="w-5 h-5 mr-2" />
               Start Your Success Journey
             </div>
-            
             <h2 className="text-3xl md:text-5xl font-bold mb-6">
               Ready to Accelerate Your Career?
             </h2>
             <p className="text-xl mb-10 opacity-90 max-w-2xl mx-auto">
               Join over 100,000 professionals who have transformed their careers with ResumeIT's comprehensive platform.
             </p>
-            
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <button 
                 onClick={() => router.push('/ai-recommendation')}
@@ -441,7 +408,6 @@ export default function FeaturesPage() {
                 Schedule Demo
               </button>
             </div>
-            
             <div className="flex items-center justify-center gap-8 text-sm opacity-75">
               <div className="flex items-center gap-2">
                 <CheckCircleIcon className="w-4 h-4" />
