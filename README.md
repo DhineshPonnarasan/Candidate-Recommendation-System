@@ -165,7 +165,7 @@ npm run dev
 
 **1. Upload Resumes**
 ```
-✅ Upload multiple PDF/DOCX resumes
+✅ Upload multiple PDF/DOCX/TXT/WORD resumes
 ✅ Automatic text extraction and parsing
 ✅ Contact info and skills detection
 ✅ Candidate profile creation
