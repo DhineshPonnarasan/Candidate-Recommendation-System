@@ -1,0 +1,101 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main gradient for robot head -->
+    <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Secondary gradient for accents -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Brain pattern gradient -->
+    <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#feca57;stop-opacity:0.8" />
+    </linearGradient>
+    
+    <!-- Text gradient -->
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Inner glow -->
+    <filter id="innerGlow">
+      <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Robot head main body (scaled down) -->
+  <rect x="5" y="10" width="35" height="30" rx="7" ry="7" fill="url(#robotGradient)" filter="url(#glow)"/>
+  
+  <!-- Top antenna/sensors -->
+  <rect x="19" y="5" width="1.5" height="7" fill="url(#accentGradient)"/>
+  <rect x="22" y="5" width="1.5" height="7" fill="url(#accentGradient)"/>
+  <circle cx="19.75" cy="3.5" r="1.2" fill="url(#accentGradient)" filter="url(#innerGlow)"/>
+  <circle cx="22.75" cy="3.5" r="1.2" fill="url(#accentGradient)" filter="url(#innerGlow)"/>
+  
+  <!-- Eyes (LED style) -->
+  <circle cx="15" cy="20" r="4" fill="white" opacity="0.9"/>
+  <circle cx="30" cy="20" r="4" fill="white" opacity="0.9"/>
+  <circle cx="15" cy="20" r="2.5" fill="url(#accentGradient)" filter="url(#innerGlow)"/>
+  <circle cx="30" cy="20" r="2.5" fill="url(#accentGradient)" filter="url(#innerGlow)"/>
+  <circle cx="15" cy="19" r="1" fill="white"/>
+  <circle cx="30" cy="19" r="1" fill="white"/>
+  
+  <!-- Brain pattern overlay on forehead -->
+  <path d="M10 15 Q15 13 20 15 Q25 13 30 15 Q35 17 35 20 Q32 18 30 20 Q25 21 20 20 Q15 21 10 20 Q7 18 10 15 Z" 
+        fill="url(#brainGradient)" opacity="0.6"/>
+  <path d="M12 17 Q17 16 22 17 Q27 16 32 17" stroke="url(#brainGradient)" stroke-width="0.8" fill="none" opacity="0.8"/>
+  
+  <!-- Mouth/speaker grille -->
+  <rect x="16" y="27" width="13" height="4" rx="2" fill="rgba(255,255,255,0.8)"/>
+  <rect x="16.5" y="28" width="12" height="0.5" fill="url(#robotGradient)"/>
+  <rect x="16.5" y="29" width="12" height="0.5" fill="url(#robotGradient)"/>
+  <rect x="16.5" y="30" width="12" height="0.5" fill="url(#robotGradient)"/>
+  
+  <!-- Side panels/circuits -->
+  <rect x="2" y="18" width="4" height="10" rx="1" fill="url(#accentGradient)" opacity="0.8"/>
+  <rect x="39" y="18" width="4" height="10" rx="1" fill="url(#accentGradient)" opacity="0.8"/>
+  <circle cx="4" cy="20" r="0.8" fill="white"/>
+  <circle cx="4" cy="26" r="0.8" fill="white"/>
+  <circle cx="41" cy="20" r="0.8" fill="white"/>
+  <circle cx="41" cy="26" r="0.8" fill="white"/>
+  
+  <!-- Neural network connections -->
+  <g opacity="0.7">
+    <circle cx="10" cy="17" r="0.8" fill="url(#accentGradient)"/>
+    <circle cx="17" cy="15" r="0.8" fill="url(#accentGradient)"/>
+    <circle cx="27" cy="15" r="0.8" fill="url(#accentGradient)"/>
+    <circle cx="35" cy="17" r="0.8" fill="url(#accentGradient)"/>
+    
+    <path d="M10 17 L17 15 M17 15 L27 15 M27 15 L35 17 M10 17 L15 20 M35 17 L30 20" 
+          stroke="url(#accentGradient)" stroke-width="0.4" opacity="0.6"/>
+  </g>
+  
+  <!-- Power indicator -->
+  <circle cx="36" cy="14" r="1.5" fill="none" stroke="url(#accentGradient)" stroke-width="0.5"/>
+  <circle cx="36" cy="14" r="0.8" fill="url(#accentGradient)" filter="url(#innerGlow)"/>
+  
+  <!-- ResumeIT Text -->
+  <text x="55" y="25" font-family="'Segoe UI', Arial, sans-serif" font-size="18" font-weight="bold" fill="url(#textGradient)">ResumeIT</text>
+  <text x="55" y="40" font-family="'Segoe UI', Arial, sans-serif" font-size="8" fill="url(#accentGradient)" opacity="0.8">AI-Powered Recruitment</text>
+</svg>
