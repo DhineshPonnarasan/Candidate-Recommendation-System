@@ -22,7 +22,7 @@ app = create_app()
 if __name__ == '__main__':
     # Run the application
     print("Starting ResumeIT Backend Server...")
-    port = int(os.environ.get('PORT', 8080))
+    port = int(os.environ.get('PORT', 8081))
     print(f"API will be available at: http://localhost:{port}")
     print(f"Health check: http://localhost:{port}/api/health")
     
