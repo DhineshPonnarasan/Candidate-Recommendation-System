@@ -6,6 +6,17 @@ A comprehensive **Full-Stack Candidate Recommendation System** with modern web t
 
 ---
 
+🌐 Live Demo - Working Application
+Experience the full power of ResumeIT with our live deployment:
+
+🔗 Frontend Application: https://effective-space-parakeet-q7v74w44w57gf9xw9-3001.app.github.dev/
+
+🔗 Backend API: https://effective-space-parakeet-q7v74w44w57gf9xw9-5000.app.github.dev/
+
+💡 Note: The application is running in development mode with full functionality including AI-powered matching, resume processing, and real-time candidate recommendations.
+
+---
+
 ## 🎯 **Complete Feature Set**
 
 ### ✅ **1. Modern Web Application (Next.js)**
