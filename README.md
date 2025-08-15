@@ -13,7 +13,7 @@ Experience the full power of ResumeIT with our live deployment:
 
 🔗 Backend API: https://effective-space-parakeet-q7v74w44w57gf9xw9-5000.app.github.dev/
 
-💡 Note: The application is running in development mode with full functionality including AI-powered matching, resume processing, and real-time candidate recommendations.
+💡 Note: The application is running in development mode with full functionality including AI-powered matching, resume processing and real-time candidate recommendations.
 
 ---
 
