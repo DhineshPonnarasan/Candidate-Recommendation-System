@@ -127,25 +127,20 @@ Experience the full power of ResumeIT with our live deployment:
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 **Quick Start Guide**
 
----
+### **Prerequisites**
+- Python 3.12+
+- Node.js 18+ (LTS recommended)
+- npm 9+ or yarn 1.22+
+- Git 2.30+
+- Redis 7+ (for caching and sessions)
+- PostgreSQL 15+ (for production) or SQLite (for development)
 
-### 📦 Prerequisites
+### **Development Environment Setup**
 
-- **Python** 3.12+
-- **Node.js** 18+ (LTS recommended)
-- **npm** 9+ or **Yarn** 1.22+
-- **Git** 2.30+
-- **Redis** 7+ (for caching and sessions)
-- **PostgreSQL** 15+ (for production) or **SQLite** (for development)
-
----
-
-### 🛠️ Development Environment Setup
-
-#### 🧠 Clone the Repository
 ```bash
+# Clone the repository
 git clone https://github.com/DhineshPonnarasan/Candidate-Recommendation-System.git
 cd Candidate-Recommendation-System
 
@@ -197,7 +192,7 @@ npm run dev
 # Docker Setup
 # ────────────────────────────────────────────────
 
-docker-compose up -d.
+docker-compose up -d
 
 # Backend
 cd backend
@@ -228,6 +223,7 @@ npm start
 # Optional: Use PM2 for Node.js process management
 npm install -g pm2
 pm2 start ecosystem.config.js
+```
 
 ---
 
@@ -239,7 +235,6 @@ pm2 start ecosystem.config.js
 | **Backend API**  | [http://localhost:5000](http://localhost:5000)                       | Flask REST API                |
 | **Health Check** | [http://localhost:5000/api/health](http://localhost:5000/api/health) | API Status                    |
 | **API Docs**     | [http://localhost:5000/api/docs](http://localhost:5000/api/docs)     | Interactive API Documentation |
-
 
 ---
 
