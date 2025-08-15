@@ -138,16 +138,17 @@ Experience the full power of ResumeIT with our live deployment:
 - **npm** 9+ or **Yarn** 1.22+
 - **Git** 2.30+
 - **Redis** 7+ (for caching and sessions)
-- **PostgreSQL** 15+ (for production) or **SQLite** (for local development)
+- **PostgreSQL** 15+ (for production) or **SQLite** (for development)
 
 ---
 
 ### 🛠️ Development Environment Setup
 
+#### 🧠 Clone the Repository
 ```bash
-# Clone the repository
 git clone https://github.com/DhineshPonnarasan/Candidate-Recommendation-System.git
 cd Candidate-Recommendation-System
+
 
 # ────────────────────────────────────────────────
 # Backend Setup
@@ -172,6 +173,7 @@ python -c "from config.sqlite_database import db_config; db_config.initialize_ta
 python app.py
 # ➜ Backend will run at http://localhost:5000
 
+
 # ────────────────────────────────────────────────
 # Frontend Setup (in a new terminal window/tab)
 # ────────────────────────────────────────────────
@@ -189,21 +191,27 @@ cp .env.local.example .env.local
 # Start Development Server
 npm run dev
 # ➜ Frontend will run at http://localhost:3000
----
-# Using Docker Compose (runs both frontend and backend)
-docker-compose up -d
 
-# OR build and run containers individually
 
-# Build backend image
+# ────────────────────────────────────────────────
+# Docker Setup
+# ────────────────────────────────────────────────
+
+docker-compose up -d.
+
+# Backend
 cd backend
 docker build -t resumeit-backend .
 
-# Build frontend image
+# Frontend
 cd ../resumeit-app
 docker build -t resumeit-frontend .
 
 ---
+
+# ────────────────────────────────────────────────
+# Production Deployment
+# ────────────────────────────────────────────────
 
 # Backend Deployment (with Gunicorn)
 cd backend
@@ -225,12 +233,13 @@ pm2 start ecosystem.config.js
 
 ### **🌐 Application URLs**
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Frontend** | http://localhost:3001 | Next.js React Application |
-| **Backend API** | http://localhost:5000 | Flask REST API |
-| **Health Check** | http://localhost:5000/api/health | API Status |
-| **API Docs** | http://localhost:5000/api/docs | Interactive API Documentation |
+| Service          | URL                                                                  | Description                   |
+| ---------------- | -------------------------------------------------------------------- | ----------------------------- |
+| **Frontend**     | [http://localhost:3000](http://localhost:3000)                       | Next.js React Application     |
+| **Backend API**  | [http://localhost:5000](http://localhost:5000)                       | Flask REST API                |
+| **Health Check** | [http://localhost:5000/api/health](http://localhost:5000/api/health) | API Status                    |
+| **API Docs**     | [http://localhost:5000/api/docs](http://localhost:5000/api/docs)     | Interactive API Documentation |
+
 
 ---
 
