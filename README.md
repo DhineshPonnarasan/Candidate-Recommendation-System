@@ -135,29 +135,39 @@ Experience the full power of ResumeIT with our live deployment:
 - npm or yarn
 - Git
 
-### **Installation & Setup**
+### 🚀 Installation & Setup
 
-```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/DhineshPonnarasan/Candidate-Recommendation-System.git
 cd Candidate-Recommendation-System
 
-# Backend Setup
+# 2. Backend Setup
 cd backend
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Activate virtual environment
+# On macOS/Linux:
+source .venv/bin/activate
+# On Windows (Command Prompt):
+.venv\Scripts\activate.bat
+# On Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+
+# Install dependencies
 pip install -r requirements.txt
 
 # Start Backend Server
 python run.py
-# Backend will run on http://localhost:8081
+# 🚀 Backend will run at http://localhost:5000
 
-# Frontend Setup (in new terminal)
+# 3. Frontend Setup (in a new terminal window or tab)
 cd ../resumeit-app
 npm install
+
+# Start Frontend Dev Server
 npm run dev
-# Frontend will run on http://localhost:3000
-```
+# 🌐 Frontend will run at http://localhost:3000
+
 
 ### **🌐 Application URLs**
 
