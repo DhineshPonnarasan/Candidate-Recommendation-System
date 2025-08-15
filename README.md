@@ -127,47 +127,99 @@ Experience the full power of ResumeIT with our live deployment:
 
 ---
 
-## 🚀 **Quick Start Guide**
+## 🚀 Quick Start Guide
 
-### **Prerequisites**
-- Python 3.12+
-- Node.js 18+
-- npm or yarn
-- Git
+---
 
-### 🚀 Installation & Setup
+### 📦 Prerequisites
 
-# 1. Clone the repository
+- **Python** 3.12+
+- **Node.js** 18+ (LTS recommended)
+- **npm** 9+ or **Yarn** 1.22+
+- **Git** 2.30+
+- **Redis** 7+ (for caching and sessions)
+- **PostgreSQL** 15+ (for production) or **SQLite** (for local development)
+
+---
+
+### 🛠️ Development Environment Setup
+
+```bash
+# Clone the repository
 git clone https://github.com/DhineshPonnarasan/Candidate-Recommendation-System.git
 cd Candidate-Recommendation-System
 
-# 2. Backend Setup
+# ────────────────────────────────────────────────
+# Backend Setup
+# ────────────────────────────────────────────────
 cd backend
-python -m venv .venv
 
-# Activate virtual environment
-# On macOS/Linux:
-source .venv/bin/activate
-# On Windows (Command Prompt):
-.venv\Scripts\activate.bat
-# On Windows (PowerShell):
-.venv\Scripts\Activate.ps1
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate         # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
+# Set up environment variables
+cp .env.example .env
+# Edit .env as needed (e.g., DB configs, API keys)
+
+# Initialize database (SQLite for development)
+python -c "from config.sqlite_database import db_config; db_config.initialize_tables()"
+
 # Start Backend Server
-python run.py
-# 🚀 Backend will run at http://localhost:5000
+python app.py
+# ➜ Backend will run at http://localhost:5000
 
-# 3. Frontend Setup (in a new terminal window or tab)
-cd ../resumeit-app
+# ────────────────────────────────────────────────
+# Frontend Setup (in a new terminal window/tab)
+# ────────────────────────────────────────────────
+cd resumeit-app
+
+# Install dependencies
 npm install
+# or
+yarn install
 
-# Start Frontend Dev Server
+# Set up environment variables
+cp .env.local.example .env.local
+# Edit .env.local to point to your backend API (e.g., NEXT_PUBLIC_API_URL)
+
+# Start Development Server
 npm run dev
-# 🌐 Frontend will run at http://localhost:3000
+# ➜ Frontend will run at http://localhost:3000
+---
+# Using Docker Compose (runs both frontend and backend)
+docker-compose up -d
 
+# OR build and run containers individually
+
+# Build backend image
+cd backend
+docker build -t resumeit-backend .
+
+# Build frontend image
+cd ../resumeit-app
+docker build -t resumeit-frontend .
+
+---
+
+# Backend Deployment (with Gunicorn)
+cd backend
+gunicorn --bind 0.0.0.0:8081 --workers 4 --timeout 120 wsgi:app
+
+# Frontend Deployment (Next.js build)
+cd ../resumeit-app
+npm run build
+npm start
+# ➜ Frontend will run at http://localhost:3000
+
+---
+
+# Optional: Use PM2 for Node.js process management
+npm install -g pm2
+pm2 start ecosystem.config.js
 
 ### **🌐 Application URLs**
 
