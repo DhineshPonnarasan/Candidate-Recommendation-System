@@ -152,7 +152,7 @@ npm run dev
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **Frontend** | http://localhost:3000 | Next.js React Application |
+| **Frontend** | http://localhost:3001 | Next.js React Application |
 | **Backend API** | http://localhost:8081 | Flask REST API |
 | **Health Check** | http://localhost:8081/api/health | API Status |
 | **API Docs** | http://localhost:8081/api/docs | Interactive API Documentation |
