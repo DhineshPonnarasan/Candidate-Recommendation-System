@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: resumeit-backend
+    env: python
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python minimal_backend.py
+    envVars:
+      - key: PORT
+        value: 5000
+    autoDeploy: true
+    rootDir: backend
+
+  - type: web
+    name: resumeit-frontend
+    env: node
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: PORT
+        value: 3001
+    autoDeploy: true
+    rootDir: resumeit-app

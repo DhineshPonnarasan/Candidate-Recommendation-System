@@ -1,7 +1,14 @@
-#!/usr/bin/env python3
 
-from flask import Flask, jsonify
-from flask_cors import CORS
+import sys
+print("[DEBUG] Python executable:", sys.executable)
+print("[DEBUG] sys.path:", sys.path)
+print("[DEBUG] Python version:", sys.version)
+try:
+    from flask import Flask, jsonify
+    from flask_cors import CORS
+except ImportError as e:
+    print("[ERROR] ImportError:", e)
+    sys.exit(1)
 
 app = Flask(__name__)
 CORS(app)

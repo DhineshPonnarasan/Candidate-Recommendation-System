@@ -1,6 +1,11 @@
 {
   "name": "Candidate Recommendation System",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12-node",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
   "postCreateCommand": "set -euxo pipefail; pip install --upgrade pip; pip install -r backend/requirements.txt || echo 'Python deps failed'; cd resumeit-app && npm install || echo 'NPM deps failed'",
   "customizations": {
     "vscode": {
