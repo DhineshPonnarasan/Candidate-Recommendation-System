@@ -1,7 +1,7 @@
 import sys
 import os
 
-# Add the current directory to Python path
+# Adding the current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, request, jsonify
@@ -10,7 +10,7 @@ from flask_cors import CORS
 import sys
 import os
 
-# Add the current directory to Python path
+# Adding the current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config.app_config import AppConfig
@@ -21,11 +21,11 @@ def create_app():
     """Application factory pattern for creating Flask app"""
     app = Flask(__name__)
     
-    # Load configuration
+    # Loading configuration
     app.config.from_object(AppConfig)
     app.config.update(JWTConfig.get_jwt_config())
     
-    # Initialize extensions with comprehensive CORS configuration
+    # Initializing extensions with comprehensive CORS configuration
     jwt = JWTManager(app)
     
     # Enhanced CORS configuration
@@ -48,7 +48,7 @@ def create_app():
             response.status_code = 200
             return response
     
-    # Add CORS headers to all responses
+    # Adding CORS headers to all responses
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin')
@@ -59,11 +59,11 @@ def create_app():
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
     
-    # Initialize database
+    # Initializing database
     with app.app_context():
         db_config.initialize_tables()
     
-    # Register blueprints - using simple imports
+    # Registering blueprints - using simple imports
     sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
     from routes.user_routes import user_bp
     from routes.job_routes import job_bp

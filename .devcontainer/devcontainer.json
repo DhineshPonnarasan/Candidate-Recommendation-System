@@ -1,0 +1,31 @@
+{
+  "name": "Candidate Recommendation System",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-node",
+  "postCreateCommand": "set -euxo pipefail; pip install --upgrade pip; pip install -r backend/requirements.txt || echo 'Python deps failed'; cd resumeit-app && npm install || echo 'NPM deps failed'",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python3.12",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    },
+    "8081": {
+      "label": "Flask API",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    }
+  }
+}
