@@ -1,4 +1,4 @@
-
+import os
 import sys
 print("[DEBUG] Python executable:", sys.executable)
 print("[DEBUG] sys.path:", sys.path)

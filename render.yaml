@@ -1,4 +1,5 @@
 services:
+  # Backend
   - type: web
     name: resumeit-backend
     env: python
@@ -11,14 +12,15 @@ services:
     autoDeploy: true
     rootDir: backend
 
+  # Frontend 
   - type: web
-    name: resumeit-frontend
+    name: resumeit-app
     env: node
     plan: free
     buildCommand: npm install --legacy-peer-deps && npm run build
     startCommand: npm run start
+    autoDeploy: true
     envVars:
       - key: PORT
         value: 3001
-    autoDeploy: true
     rootDir: resumeit-app
