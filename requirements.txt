@@ -1,22 +1,47 @@
-# Ensure pip, setuptools, and wheel are up to date
-pip>=25.2
-setuptools>=65
-wheel
-
-# PyTorch CPU-only build
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1
-
-# Common ML / NLP libraries
-torchvision==0.20.1+cpu
-torchaudio==2.5.1+cpu
-transformers==4.44.2
-sentence-transformers==3.1.1
-scikit-learn==1.5.1
-numpy==2.1.1
+blinker==1.9.0
+certifi==2025.8.3
+charset-normalizer==3.4.3
+click==8.1.8
+filelock==3.19.1
+Flask==3.0.3
+fsspec==2025.7.0
+h11==0.16.0
+hf-xet==1.1.7
+huggingface-hub==0.34.4
+idna==3.10
+importlib_metadata==8.7.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+joblib==1.5.1
+MarkupSafe==3.0.2
+mpmath==1.3.0
+networkx==3.2.1
+numpy==1.26.4
+packaging==25.0
 pandas==2.2.2
-scipy==1.14.1
-
-# Optional: if you use Flask/FastAPI for serving
-flask==3.0.3
+pillow==11.3.0
+pkg_resources==0.0.0
+python-dateutil==2.9.0.post0
+pytz==2025.2
+PyYAML==6.0.2
+regex==2025.7.34
+requests==2.32.4
+safetensors==0.6.2
+scikit-learn==1.5.1
+scipy==1.11.4
+sentence-transformers==3.1.1
+six==1.17.0
+sympy==1.13.1
+threadpoolctl==3.6.0
+tokenizers==0.19.1
+torch==2.5.1+cpu
+torchaudio==2.5.1+cpu
+torchvision==0.20.1+cpu
+tqdm==4.67.1
+transformers==4.44.2
+typing_extensions==4.14.1
+tzdata==2025.2
+urllib3==2.5.0
 uvicorn==0.30.6
+Werkzeug==3.1.3
+zipp==3.23.0
