@@ -5,7 +5,7 @@ wheel
 
 # PyTorch CPU-only build
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1+cpu
+torch==2.5.1
 
 # Common ML / NLP libraries
 torchvision==0.20.1+cpu
