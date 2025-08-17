@@ -61,4 +61,4 @@ logs
 *.log
 
 # Dependencies
-package-lock.json 
+package-lock.json fresh_env/
