@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 import { parseResume } from '@/utils/resumeParser';
 import { resumeService, type CandidateData } from '@/services/resumeService';
 import ResumeUpload from './ResumeUpload';
-import JobDescriptionInput from './JobDescriptionInput';
-import MatchResults from './MatchResults';
+import JobDescriptionInput from '@/components/ai-recommendation/JobDescriptionInput';
+import MatchResults from '@/components/ai-recommendation/MatchResults';
 import {
   calculateSemanticSimilarity,
   extractContactInfoFromText,
