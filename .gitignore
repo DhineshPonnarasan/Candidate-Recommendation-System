@@ -27,6 +27,9 @@ yarn-error.log*
 .next/
 out/
 
+# Local Python virtual environment
+fresh_env/
+
 
 # Node.js
 node_modules/

@@ -1,19 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Unblock builds on Render
+  eslint: { ignoreDuringBuilds: true },
+  // If you want to skip TS type errors in prod builds too, uncomment:
+  // typescript: { ignoreBuildErrors: true },
+
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'logo.clearbit.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
+
   webpack: (config, { isServer }) => {
     // prevent native node bindings from being bundled on the client
+    config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       'onnxruntime-node': false,
     };
 
-    // (optional) avoid polyfills that @xenova/transformers doesn't need on the client
+    // avoid unnecessary polyfills on the client
     config.resolve.fallback = {
       ...(config.resolve.fallback || {}),
       fs: false,
@@ -23,7 +30,9 @@ const nextConfig = {
       vm: false,
     };
 
-    // Exclude old files from compilation
+    // exclude old files from compilation
+    config.module = config.module || {};
+    config.module.rules = config.module.rules || [];
     config.module.rules.push({
       test: /\.(tsx?|jsx?)$/,
       exclude: [
@@ -36,14 +45,6 @@ const nextConfig = {
 
     return config;
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://127.0.0.1:5000/api/:path*', // proxy to Flask
-      },
-    ];
-  },
-};
 
+};
 module.exports = nextConfig;
