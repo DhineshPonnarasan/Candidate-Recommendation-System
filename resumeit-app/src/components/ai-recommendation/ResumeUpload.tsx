@@ -1,5 +1,4 @@
 'use client'
-import ResumeUpload from '@/components/ai-recommendation/ResumeUpload';
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
