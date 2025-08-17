@@ -359,7 +359,7 @@ const AIRecommendationForm = () => {
           </div>
         </motion.div>
       )}
-      {analysisComplete && @/components/ai-recommendation/MatchResultslength > 0 && (
+  {analysisComplete && matchResults.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -382,7 +382,7 @@ const AIRecommendationForm = () => {
           />
         </motion.div>
       )}
-      {analysisComplete && @/components/ai-recommendation/MatchResultslength === 0 && (
+  {analysisComplete && matchResults.length === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
