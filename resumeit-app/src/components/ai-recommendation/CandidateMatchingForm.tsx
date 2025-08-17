@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { parseResume } from '@/utils/resumeParser';
 import { resumeService, type CandidateData } from '@/services/resumeService';
-import ResumeUpload from '@/components/ai-recommendation/ResumeUpload';
-import JobDescriptionInput from '@/components/ai-recommendation/JobDescriptionInput';
-import MatchResults from '@/components/ai-recommendation/MatchResults';
+import ResumeUpload from './ResumeUpload';
+import JobDescriptionInput from './JobDescriptionInput';
+import MatchResults from './MatchResults';
 import {
   calculateSemanticSimilarity,
   extractContactInfoFromText,
@@ -359,7 +359,7 @@ const AIRecommendationForm = () => {
           </div>
         </motion.div>
       )}
-      {analysisComplete && matchResults.length > 0 && (
+      {analysisComplete && @/components/ai-recommendation/MatchResultslength > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -382,7 +382,7 @@ const AIRecommendationForm = () => {
           />
         </motion.div>
       )}
-      {analysisComplete && matchResults.length === 0 && (
+      {analysisComplete && @/components/ai-recommendation/MatchResultslength === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
