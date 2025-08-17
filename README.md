@@ -10,9 +10,9 @@ A comprehensive **Full-Stack Candidate Recommendation System** powered by advanc
 
 Experience the full power of ResumeIT with our live deployment:
 
-🔗 **Frontend Application:** https://effective-space-parakeet-q7v74w44w57gf9xw9-3001.app.github.dev/
+🔗 **Frontend Application:** [https://effective-space-parakeet-q7v74w44w57gf9xw9-3001.app.github.dev/](https://candidate-recommendation-system-frontend.onrender.com)
 
-🔗 **Backend API:** https://effective-space-parakeet-q7v74w44w57gf9xw9-5000.app.github.dev/
+🔗 **Backend API:** [https://effective-space-parakeet-q7v74w44w57gf9xw9-5000.app.github.dev/](https://candidate-recommendation-system-backend.onrender.com/)
 
 > 💡 **Note:** The application is running in development mode with full functionality including AI-powered matching, resume processing, and real-time candidate recommendations.
 
