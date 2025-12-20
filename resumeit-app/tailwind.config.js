@@ -85,7 +85,8 @@ module.exports = {
       },
       fontFamily: {
         'sans': ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
-        'display': ['Inter', 'ui-sans-serif', 'system-ui'],
+        'display': ['Poppins', 'Inter', 'ui-sans-serif', 'system-ui'],
+        'body': ['Inter', 'ui-sans-serif', 'system-ui'],
       },
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],
@@ -128,6 +129,10 @@ module.exports = {
         'bounce-gentle': 'bounceGentle 2s ease-in-out infinite',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
         'gradient-shift': 'gradientShift 3s ease-in-out infinite',
+        'shimmer': 'shimmer 2s infinite linear',
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'slide-up': 'slideUp 0.5s ease-out',
+        'scale-up': 'scaleUp 0.3s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -165,6 +170,22 @@ module.exports = {
         gradientShift: {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-468px 0' },
+          '100%': { backgroundPosition: '468px 0' },
+        },
+        glow: {
+          '0%': { boxShadow: '0 0 5px rgba(59, 130, 246, 0.5)' },
+          '100%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.4)' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        scaleUp: {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
       backgroundImage: {

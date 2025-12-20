@@ -78,9 +78,13 @@ def create_app():
     app.register_blueprint(application_bp, url_prefix='/api/applications')
     
     # Health check endpoint
-    @app.route('/api/health')
+    @app.route('/api/health', methods=['GET', 'OPTIONS'])
     def health_check():
-        return {'status': 'healthy', 'message': 'ResumeIT API is running'}, 200
+        return jsonify({
+            'status': 'healthy', 
+            'message': 'ResumeIT API is running',
+            'version': '1.0.0'
+        }), 200
     
     # Error handlers
     @app.errorhandler(404)

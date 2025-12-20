@@ -37,7 +37,6 @@ def save_uploaded_file(file, folder='resumes'):
         return None, f'Error saving file: {str(e)}'
 
 @candidate_bp.route('/upload', methods=['POST'])
-@jwt_required()
 def upload_candidate_resume():
     """Upload and process a candidate resume"""
     try:
@@ -68,10 +67,17 @@ def upload_candidate_resume():
         # Generate embedding
         embedding = embedding_service.generate_embedding(resume_text)
         
-        # Prepare candidate data
-        candidate_name = contact_info.get('name') or request.form.get('name', 'Unknown Candidate')
-        candidate_email = contact_info.get('email') or request.form.get('email')
-        candidate_phone = contact_info.get('phone') or request.form.get('phone')
+        # Validate extracted text - reject binary data
+        if resume_text.strip().startswith('%PDF-') or '\x00' in resume_text:
+            print(f"[ERROR] Binary PDF data detected in extracted text for {file.filename}")
+            return jsonify({'error': 'PDF parsing failed - received binary data instead of text. The PDF may be corrupted or require special handling.'}), 400
+        
+        # Prepare candidate data - use extracted info, fallback to form data, then empty string
+        # Only use 'Unknown Candidate' if extraction truly failed
+        candidate_name = contact_info.get('name') or request.form.get('name') or 'Unknown Candidate'
+        candidate_email = contact_info.get('email') or request.form.get('email') or ''
+        candidate_phone = contact_info.get('phone') or request.form.get('phone') or ''
+        candidate_linkedin = contact_info.get('linkedin') or ''
         
         # Create candidate record
         candidate = Candidate.create(
@@ -90,6 +96,7 @@ def upload_candidate_resume():
         if not candidate:
             return jsonify({'error': 'Failed to create candidate record'}), 500
         
+        # Return complete candidate data including all extracted fields
         return jsonify({
             'message': 'Resume uploaded and processed successfully',
             'candidate': {
@@ -97,20 +104,36 @@ def upload_candidate_resume():
                 'name': candidate['name'],
                 'email': candidate['email'],
                 'phone': candidate['phone'],
+                'linkedin': candidate_linkedin,  # Include LinkedIn
                 'skills': candidate['skills'],
                 'experience_years': candidate['experience_years'],
                 'education': candidate['education'],
+                'location': contact_info.get('location'),
+                'resume_text': resume_text,  # CRITICAL: Always include resume_text
+                'file_path': file_path,
                 'extracted_info': {
                     'sections': resume_sections,
                     'skills_found': len(skills),
                     'has_embedding': embedding is not None
                 }
-            }
+            },
+            # Also return at top level for easier access
+            'resume_text': resume_text,
+            'name': candidate_name,
+            'email': candidate_email,
+            'phone': candidate_phone,
+            'linkedin': candidate_linkedin
         }), 201
         
     except Exception as e:
-        print(f"Resume upload error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[ERROR] Resume upload failed: {e}")
+        print(f"[ERROR] Traceback:\n{error_trace}")
+        return jsonify({
+            'error': f'Failed to process resume: {str(e)}',
+            'details': error_trace if AppConfig.DEBUG else None
+        }), 500
 
 @candidate_bp.route('/bulk-upload', methods=['POST'])
 @jwt_required()

@@ -3,6 +3,7 @@ export interface CandidateData {
   name: string;
   email?: string;
   phone?: string;
+  linkedin?: string;
   skills: string[];
   experience_years?: number;
   education?: string;
@@ -20,7 +21,7 @@ export interface UploadResponse {
   candidate: CandidateData;
 }
 class ResumeService {
-  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
   private async getAuthToken(): Promise<string | null> {
     try {
       const token = localStorage.getItem('auth_token');
@@ -55,10 +56,47 @@ class ResumeService {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        const errorMsg = errorData.error || errorData.message || `Upload failed with status ${response.status}`;
+        console.error(`[RESUME SERVICE] Backend upload failed:`, errorMsg, errorData);
+        throw new Error(errorMsg);
       }
+      
       const data: UploadResponse = await response.json();
-      return data.candidate;
+      console.log(`[RESUME SERVICE] Backend response received:`, {
+        hasCandidate: !!data.candidate,
+        hasResumeText: !!(data.candidate?.resume_text || (data as any).resume_text),
+        topLevelResumeText: !!(data as any).resume_text
+      });
+      
+      // Backend now returns data at multiple levels for compatibility
+      // Check candidate object first, then top-level fields
+      const candidate = data.candidate || data;
+      
+      // Ensure resume_text is available (critical for similarity calculation)
+      if (!candidate.resume_text && (data as any).resume_text) {
+        candidate.resume_text = (data as any).resume_text;
+      }
+      
+      // Also check top-level fields
+      if (!candidate.resume_text && (data as any).resume_text) {
+        candidate.resume_text = (data as any).resume_text;
+      }
+      
+      // Ensure name, email, phone, linkedin are available
+      if (!candidate.name && (data as any).name) {
+        candidate.name = (data as any).name;
+      }
+      if (!candidate.email && (data as any).email) {
+        candidate.email = (data as any).email;
+      }
+      if (!candidate.phone && (data as any).phone) {
+        candidate.phone = (data as any).phone;
+      }
+      if (!candidate.linkedin && (data as any).linkedin) {
+        candidate.linkedin = (data as any).linkedin;
+      }
+      
+      return candidate;
     } catch (error) {
       console.error('Resume upload failed:', error);
       throw error;
@@ -96,15 +134,32 @@ class ResumeService {
   }
   async testConnection(): Promise<boolean> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${this.baseURL}/api/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
-      return response.ok;
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        return false;
+      }
+      
+      // Try to parse JSON to ensure it's a valid response
+      const data = await response.json().catch(() => null);
+      return data !== null;
     } catch (error) {
-      console.warn('Backend connection test failed:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('Backend connection test timed out after 5 seconds');
+      } else {
+        console.warn('Backend connection test failed:', error);
+      }
       return false;
     }
   }

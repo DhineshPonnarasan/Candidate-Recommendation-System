@@ -101,15 +101,66 @@ async function extractPdfText(file: File): Promise<string> {
           try {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
-            const pageText = textContent.items
-              .map((item: any) => item.str || '')
-              .join(' ')
-              .replace(/\s+/g, ' ')
-              .trim();
+            
+            // Production-grade text extraction: preserve reading order and layout
+            // This is how FAANG companies extract text - maintaining line structure
+            const textItems: Array<{str: string; y: number; x: number}> = [];
+            
+            for (const item of textContent.items) {
+              if (item.str && item.str.trim()) {
+                // Get text position for ordering
+                const transform = item.transform || [1, 0, 0, 1, 0, 0];
+                const x = transform[4] || 0;
+                const y = transform[5] || 0;
+                textItems.push({
+                  str: item.str,
+                  y: -y, // Negate because PDF Y increases downward
+                  x: x
+                });
+              }
+            }
+            
+            // Sort by reading order: top to bottom (higher Y first), then left to right
+            textItems.sort((a, b) => {
+              const yDiff = b.y - a.y; // Higher Y (top) comes first
+              if (Math.abs(yDiff) > 5) { // Different lines (>5px difference)
+                return yDiff;
+              }
+              return a.x - b.x; // Same line: left to right
+            });
+            
+            // Group into lines (items with similar Y coordinates)
+            const lines: string[] = [];
+            let currentLine: string[] = [];
+            let currentY = null;
+            const yThreshold = 8; // Pixels - items within this are same line
+            
+            for (const item of textItems) {
+              if (currentY === null) {
+                currentY = item.y;
+                currentLine = [item.str];
+              } else if (Math.abs(item.y - currentY) < yThreshold) {
+                // Same line
+                currentLine.push(item.str);
+              } else {
+                // New line
+                if (currentLine.length > 0) {
+                  lines.push(currentLine.join(' '));
+                }
+                currentLine = [item.str];
+                currentY = item.y;
+              }
+            }
+            // Add last line
+            if (currentLine.length > 0) {
+              lines.push(currentLine.join(' '));
+            }
+            
+            const pageText = lines.join('\n').trim();
             if (pageText) {
               texts.push(pageText);
             }
-            console.log(`Page ${i} extracted: ${pageText.length} characters`);
+            console.log(`Page ${i} extracted: ${pageText.length} characters (${lines.length} lines)`);
           } catch (pageErr) {
             console.warn(`Failed to extract page ${i}:`, pageErr);
             continue;
@@ -117,6 +168,14 @@ async function extractPdfText(file: File): Promise<string> {
         }
         const fullText = texts.join('\n').trim();
         console.log('Total extracted text length:', fullText.length);
+        
+        // Log sample of extracted text for debugging
+        if (fullText.length > 0) {
+          console.log('Sample extracted text (first 300 chars):', fullText.substring(0, 300));
+        } else {
+          console.warn('WARNING: No text extracted from PDF. The PDF may be image-based or corrupted.');
+        }
+        
         try { 
           (loadingTask as any).destroy(); 
         } catch (destroyErr) {
@@ -124,15 +183,32 @@ async function extractPdfText(file: File): Promise<string> {
         }
         return fullText;
       } catch (configErr) {
-        console.warn(`PDF loading failed with ${name}:`, configErr);
+        const errMsg = configErr instanceof Error ? configErr.message : String(configErr);
+        // Only log as warning, not error, to avoid console.error noise
+        if (name === 'Basic config') {
+          // Last attempt - log more details
+          console.warn(`PDF loading failed with ${name}:`, errMsg);
+        } else {
+          // Earlier attempts - minimal logging
+          console.log(`PDF loading attempt "${name}" failed, trying next...`);
+        }
         continue; // Try next configuration
       }
     }
-    console.error('All PDF loading configurations failed');
+    // All PDF.js configurations failed - this is expected for some PDFs
+    // Don't log as error, just return empty and let OCR try
+    console.log('PDF.js extraction failed - PDF may be image-based or require OCR');
     return '';
   } catch (err) {
     console.error('PDF text extraction failed:', err);
-    return '';
+    // Try OCR as fallback
+    try {
+      console.log('Attempting OCR fallback after error...');
+      return await extractPdfWithOCR(file);
+    } catch (ocrErr) {
+      console.warn('OCR fallback failed:', ocrErr);
+      return '';
+    }
   }
 }
 async function extractDocxText(file: File): Promise<string> {
@@ -168,79 +244,93 @@ async function extractTxt(file: File): Promise<string> {
 async function extractPdfWithOCR(file: File): Promise<string> {
   try {
     console.log('Attempting OCR-based text extraction for PDF:', file.name);
+    
+    // Check if Tesseract is available
+    if (typeof Tesseract === 'undefined') {
+      console.warn('Tesseract OCR not available - install tesseract.js for OCR support');
+      return '';
+    }
+    
+    // CRITICAL: Tesseract cannot process PDF blobs directly - it needs images
+    // For proper OCR of PDFs, we would need to:
+    // 1. Render PDF pages to canvas
+    // 2. Convert canvas to image
+    // 3. Run OCR on the image
+    // This is complex and not implemented here
+    // So we skip OCR for PDFs and only use it as a last resort for image files
+    console.warn('OCR cannot process PDF files directly - requires PDF-to-image conversion (not implemented)');
+    return '';
+    
+    // The code below would work for image files, but not PDFs:
+    /*
     const arrayBuffer = await file.arrayBuffer();
     const blob = new Blob([arrayBuffer], { type: file.type });
-    const result = await Tesseract.recognize(blob, 'eng', {
-      logger: (info: { status: string; progress?: number }) => console.log(info),
+    
+    // Use a timeout for OCR (can be slow)
+    const ocrPromise = Tesseract.recognize(blob, 'eng', {
+      logger: (info: { status: string; progress?: number }) => {
+        if (info.status === 'recognizing text') {
+          console.log(`OCR progress: ${Math.round((info.progress || 0) * 100)}%`);
+        }
+      },
     });
+    
+    // 30 second timeout for OCR
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('OCR timeout after 30 seconds')), 30000);
+    });
+    
+    const result = await Promise.race([ocrPromise, timeoutPromise]);
     const text = result.data.text.trim();
     console.log('OCR extraction completed. Text length:', text.length);
     return text;
+    */
   } catch (err) {
-    console.error('OCR-based text extraction failed:', err);
+    // OCR errors are expected for PDFs - don't log as error
+    if (err instanceof Error && err.message.includes('timeout')) {
+      console.warn('OCR extraction timed out - PDF may be too large or complex');
+    } else if (err instanceof Error && err.message.includes('read image')) {
+      console.warn('OCR cannot process PDF files directly - requires image conversion');
+    } else {
+      console.warn('OCR-based text extraction failed (expected for PDFs):', err instanceof Error ? err.message : String(err));
+    }
     return '';
   }
 }
-export async function parseResume(file: File): Promise<string> {
-  console.log('Starting resume parsing for file:', file.name, 'Type:', file.type, 'Size:', file.size);
+/**
+ * Simplified resume parser - TXT files only
+ * PDF/DOCX files MUST be processed by backend (multi-library parsing)
+ * This function is only used as fallback when backend is unavailable
+ */
+export async function parseResume(file: File, timeout: number = 30000): Promise<string> {
+  console.log('[CLIENT-SIDE PARSER] Processing file:', file.name, 'Type:', file.type, 'Size:', file.size);
+  
   if (!file) {
-    console.error('No file provided for parsing');
     throw new Error('No file provided');
   }
   if (file.size === 0) {
-    console.error('File is empty');
     throw new Error('File is empty');
   }
   if (file.size > 50 * 1024 * 1024) { // 50MB limit
-    console.error('File too large:', file.size);
     throw new Error('File size exceeds 50MB limit');
   }
+  
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  
+  // CRITICAL: Only support TXT files in client-side parser
+  // PDF/DOCX require backend with multi-library parsing
+  if (ext !== 'txt') {
+    throw new Error(`Client-side parser only supports TXT files. ${ext?.toUpperCase()} files require backend server with multi-library PDF parsing (pdfplumber, pdfminer.six, PyPDF2).`);
+  }
+  
+  // Simple TXT file reading
   try {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    let text = '';
-    console.log('Detected file extension:', ext);
-    if (ext === 'pdf') {
-      console.log('Processing as PDF file');
-      text = await extractPdfText(file);
-      if (!text) {
-        console.log('PDF parsing failed, trying alternative text extraction...');
-        try {
-          const textAttempt = await file.text();
-          if (textAttempt && textAttempt.length > 50) {
-            console.log('Alternative text extraction succeeded');
-            text = textAttempt;
-          } else {
-            console.log('Attempting OCR-based extraction as a last resort...');
-            text = await extractPdfWithOCR(file);
-          }
-        } catch (textErr) {
-          console.warn('Alternative text extraction also failed:', textErr);
-        }
-      }
-    } else if (ext === 'docx') {
-      console.log('Processing as DOCX file');
-      text = await extractDocxText(file);
-    } else if (ext === 'txt') {
-      console.log('Processing as TXT file');
-      text = await extractTxt(file);
-    } else {
-      console.warn('Unsupported file format, attempting text extraction:', ext);
-      text = await file.text();
-    }
-    text = text.trim();
-    console.log('Resume parsing completed. Extracted text length:', text.length);
-    if (!text) {
-      console.warn('Unable to extract text from file. The file may be corrupted, image-based, or in an unsupported format.');
-    }
-    if (text.length < 50 && text.length > 0) {
-      console.warn('Extracted text is very short, may indicate parsing issues');
-    }
-    return text; // Return whatever we got, even if empty
+    const text = await extractTxt(file);
+    console.log('[CLIENT-SIDE PARSER] Extracted text length:', text.length);
+    return text;
   } catch (error) {
-    console.error('Resume parsing failed:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown parsing error';
-    console.warn(`Unable to process resume file: ${errorMessage}`);
-    return ''; // Return empty string instead of throwing
+    console.error('[CLIENT-SIDE PARSER] Failed to read TXT file:', error);
+    throw error;
   }
 }
 (globalThis as any).testPdfParsing = async (file: File) => {

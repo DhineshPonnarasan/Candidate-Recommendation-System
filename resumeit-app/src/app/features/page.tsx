@@ -204,13 +204,13 @@ export default function FeaturesPage() {
               <SparklesIcon className="w-5 h-5 mr-2" />
               Next-Gen Career Platform
             </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-6">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-6">
               Comprehensive Career
               <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Success Platform
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed font-body">
               Everything you need to accelerate your career - from AI-powered resume optimization to interview preparation, skill assessments, and job matching.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
@@ -272,10 +272,10 @@ export default function FeaturesPage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+            <h2 className="text-3xl md:text-5xl font-display font-bold text-gray-900 mb-6">
               {activeTab === 'external' ? 'Essential External Tools' : 'Built-in Platform Features'}
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-body">
               {activeTab === 'external' 
                 ? 'Access powerful third-party tools for resume optimization and career development.'
                 : 'Comprehensive features built right into our platform for complete career management.'

@@ -1,39 +1,54 @@
 'use client'
-import React from 'react'
-import Image from 'next/image'
+import React, { useState } from 'react'
+
 const CompanySection: React.FC = () => {
+  const [failedLogos, setFailedLogos] = useState<Set<string>>(new Set())
+  const [logoSources, setLogoSources] = useState<Map<string, string>>(new Map())
+  
   const companies = [
-    { name: 'Amazon', logo: 'https://logo.clearbit.com/amazon.com', careers: 'https://www.amazon.jobs/' },
-    { name: 'Apple', logo: 'https://logo.clearbit.com/apple.com', careers: 'https://jobs.apple.com/' },
-    { name: 'Google', logo: 'https://logo.clearbit.com/google.com', careers: 'https://careers.google.com/' },
-    { name: 'Microsoft', logo: 'https://logo.clearbit.com/microsoft.com', careers: 'https://careers.microsoft.com/' },
-    { name: 'Meta', logo: 'https://logo.clearbit.com/facebook.com', careers: 'https://www.metacareers.com/' },
-    { name: 'Netflix', logo: 'https://logo.clearbit.com/netflix.com', careers: 'https://jobs.netflix.com/' },
-    { name: 'Tesla', logo: 'https://logo.clearbit.com/tesla.com', careers: 'https://www.tesla.com/careers' },
-    { name: 'Uber', logo: 'https://logo.clearbit.com/uber.com', careers: 'https://www.uber.com/us/en/careers/' },
-    { name: 'Airbnb', logo: 'https://logo.clearbit.com/airbnb.com', careers: 'https://careers.airbnb.com/' },
-    { name: 'Spotify', logo: 'https://logo.clearbit.com/spotify.com', careers: 'https://www.lifeatspotify.com/' },
-    { name: 'Adobe', logo: 'https://logo.clearbit.com/adobe.com', careers: 'https://adobe.wd5.myworkdayjobs.com/' },
-    { name: 'Salesforce', logo: 'https://logo.clearbit.com/salesforce.com', careers: 'https://careers.salesforce.com/' },
-    { name: 'Oracle', logo: 'https://logo.clearbit.com/oracle.com', careers: 'https://www.oracle.com/careers/' },
-    { name: 'IBM', logo: 'https://logo.clearbit.com/ibm.com', careers: 'https://www.ibm.com/careers' },
-    { name: 'Intel', logo: 'https://logo.clearbit.com/intel.com', careers: 'https://jobs.intel.com/' },
-    { name: 'NVIDIA', logo: 'https://logo.clearbit.com/nvidia.com', careers: 'https://www.nvidia.com/en-us/about-nvidia/careers/' },
-    { name: 'LinkedIn', logo: 'https://logo.clearbit.com/linkedin.com', careers: 'https://careers.linkedin.com/' },
-    { name: 'Twitter', logo: 'https://logo.clearbit.com/twitter.com', careers: 'https://careers.twitter.com/' },
-    { name: 'Slack', logo: 'https://logo.clearbit.com/slack.com', careers: 'https://slack.com/careers' },
-    { name: 'Zoom', logo: 'https://logo.clearbit.com/zoom.us', careers: 'https://careers.zoom.us/' },
-    { name: 'Dropbox', logo: 'https://logo.clearbit.com/dropbox.com', careers: 'https://jobs.dropbox.com/' },
-    { name: 'Square', logo: 'https://logo.clearbit.com/squareup.com', careers: 'https://careers.squareup.com/' },
-    { name: 'Stripe', logo: 'https://logo.clearbit.com/stripe.com', careers: 'https://stripe.com/jobs' },
-    { name: 'PayPal', logo: 'https://logo.clearbit.com/paypal.com', careers: 'https://www.paypal.com/us/webapps/mpp/jobs' },
-    { name: 'eBay', logo: 'https://logo.clearbit.com/ebay.com', careers: 'https://careers.ebayinc.com/' },
-    { name: 'Shopify', logo: 'https://logo.clearbit.com/shopify.com', careers: 'https://www.shopify.com/careers' },
-    { name: 'GitHub', logo: 'https://logo.clearbit.com/github.com', careers: 'https://github.com/about/careers' },
-    { name: 'GitLab', logo: 'https://logo.clearbit.com/gitlab.com', careers: 'https://about.gitlab.com/jobs/' },
-    { name: 'Atlassian', logo: 'https://logo.clearbit.com/atlassian.com', careers: 'https://www.atlassian.com/company/careers' },
-    { name: 'ServiceNow', logo: 'https://logo.clearbit.com/servicenow.com', careers: 'https://www.servicenow.com/careers.html' }
+    { name: 'Amazon', logo: 'https://logo.clearbit.com/amazon.com', fallbackLogo: 'https://cdn.simpleicons.org/amazon/FF9900', careers: 'https://www.amazon.jobs/' },
+    { name: 'Apple', logo: 'https://logo.clearbit.com/apple.com', fallbackLogo: 'https://cdn.simpleicons.org/apple/000000', careers: 'https://jobs.apple.com/' },
+    { name: 'Google', logo: 'https://logo.clearbit.com/google.com', fallbackLogo: 'https://cdn.simpleicons.org/google/4285F4', careers: 'https://careers.google.com/' },
+    { name: 'Microsoft', logo: 'https://logo.clearbit.com/microsoft.com', fallbackLogo: 'https://cdn.simpleicons.org/microsoft/0078D4', careers: 'https://careers.microsoft.com/' },
+    { name: 'Meta', logo: 'https://logo.clearbit.com/facebook.com', fallbackLogo: 'https://cdn.simpleicons.org/meta/0081FB', careers: 'https://www.metacareers.com/' },
+    { name: 'Netflix', logo: 'https://logo.clearbit.com/netflix.com', fallbackLogo: 'https://cdn.simpleicons.org/netflix/E50914', careers: 'https://jobs.netflix.com/' },
+    { name: 'Tesla', logo: 'https://logo.clearbit.com/tesla.com', fallbackLogo: 'https://cdn.simpleicons.org/tesla/CC0000', careers: 'https://www.tesla.com/careers' },
+    { name: 'Uber', logo: 'https://logo.clearbit.com/uber.com', fallbackLogo: 'https://cdn.simpleicons.org/uber/000000', careers: 'https://www.uber.com/us/en/careers/' },
+    { name: 'Airbnb', logo: 'https://logo.clearbit.com/airbnb.com', fallbackLogo: 'https://cdn.simpleicons.org/airbnb/FF5A5F', careers: 'https://careers.airbnb.com/' },
+    { name: 'Spotify', logo: 'https://logo.clearbit.com/spotify.com', fallbackLogo: 'https://cdn.simpleicons.org/spotify/1DB954', careers: 'https://www.lifeatspotify.com/' },
+    { name: 'Adobe', logo: 'https://logo.clearbit.com/adobe.com', fallbackLogo: 'https://cdn.simpleicons.org/adobe/FF0000', careers: 'https://adobe.wd5.myworkdayjobs.com/' },
+    { name: 'Salesforce', logo: 'https://logo.clearbit.com/salesforce.com', fallbackLogo: 'https://cdn.simpleicons.org/salesforce/00A1E0', careers: 'https://careers.salesforce.com/' },
+    { name: 'Oracle', logo: 'https://logo.clearbit.com/oracle.com', fallbackLogo: 'https://cdn.simpleicons.org/oracle/F80000', careers: 'https://www.oracle.com/careers/' },
+    { name: 'IBM', logo: 'https://logo.clearbit.com/ibm.com', fallbackLogo: 'https://cdn.simpleicons.org/ibm/006699', careers: 'https://www.ibm.com/careers' },
+    { name: 'Intel', logo: 'https://logo.clearbit.com/intel.com', fallbackLogo: 'https://cdn.simpleicons.org/intel/0071C5', careers: 'https://jobs.intel.com/' },
+    { name: 'NVIDIA', logo: 'https://logo.clearbit.com/nvidia.com', fallbackLogo: 'https://cdn.simpleicons.org/nvidia/76B900', careers: 'https://www.nvidia.com/en-us/about-nvidia/careers/' },
+    { name: 'LinkedIn', logo: 'https://logo.clearbit.com/linkedin.com', fallbackLogo: 'https://cdn.simpleicons.org/linkedin/0A66C2', careers: 'https://careers.linkedin.com/' },
+    { name: 'Twitter', logo: 'https://logo.clearbit.com/twitter.com', fallbackLogo: 'https://cdn.simpleicons.org/x/000000', careers: 'https://careers.twitter.com/' },
+    { name: 'Slack', logo: 'https://logo.clearbit.com/slack.com', fallbackLogo: 'https://cdn.simpleicons.org/slack/4A154B', careers: 'https://slack.com/careers' },
+    { name: 'Zoom', logo: 'https://logo.clearbit.com/zoom.us', fallbackLogo: 'https://cdn.simpleicons.org/zoom/2D8CFF', careers: 'https://careers.zoom.us/' },
+    { name: 'Dropbox', logo: 'https://logo.clearbit.com/dropbox.com', fallbackLogo: 'https://cdn.simpleicons.org/dropbox/0061FF', careers: 'https://jobs.dropbox.com/' },
+    { name: 'Square', logo: 'https://logo.clearbit.com/squareup.com', fallbackLogo: 'https://cdn.simpleicons.org/square/3E4348', careers: 'https://careers.squareup.com/' },
+    { name: 'Stripe', logo: 'https://logo.clearbit.com/stripe.com', fallbackLogo: 'https://cdn.simpleicons.org/stripe/635BFF', careers: 'https://stripe.com/jobs' },
+    { name: 'PayPal', logo: 'https://logo.clearbit.com/paypal.com', fallbackLogo: 'https://cdn.simpleicons.org/paypal/00457C', careers: 'https://www.paypal.com/us/webapps/mpp/jobs' },
+    { name: 'eBay', logo: 'https://logo.clearbit.com/ebay.com', fallbackLogo: 'https://cdn.simpleicons.org/ebay/E53238', careers: 'https://careers.ebayinc.com/' },
+    { name: 'Shopify', logo: 'https://logo.clearbit.com/shopify.com', fallbackLogo: 'https://cdn.simpleicons.org/shopify/96BF48', careers: 'https://www.shopify.com/careers' },
+    { name: 'GitHub', logo: 'https://logo.clearbit.com/github.com', fallbackLogo: 'https://cdn.simpleicons.org/github/181717', careers: 'https://github.com/about/careers' },
+    { name: 'GitLab', logo: 'https://logo.clearbit.com/gitlab.com', fallbackLogo: 'https://cdn.simpleicons.org/gitlab/FC6D26', careers: 'https://about.gitlab.com/jobs/' },
+    { name: 'Atlassian', logo: 'https://logo.clearbit.com/atlassian.com', fallbackLogo: 'https://cdn.simpleicons.org/atlassian/0052CC', careers: 'https://www.atlassian.com/company/careers' },
+    { name: 'ServiceNow', logo: 'https://logo.clearbit.com/servicenow.com', fallbackLogo: 'https://cdn.simpleicons.org/servicenow/81B5A1', careers: 'https://www.servicenow.com/careers.html' }
   ]
+
+  const handleImageError = (companyName: string, fallbackLogo?: string) => {
+    const currentSource = logoSources.get(companyName)
+    // Try fallback logo if available and we haven't tried it yet
+    if (fallbackLogo && currentSource !== fallbackLogo) {
+      setLogoSources(prev => new Map(prev).set(companyName, fallbackLogo))
+    } else {
+      // Both logos failed, show text fallback
+      setFailedLogos(prev => new Set(prev).add(companyName))
+    }
+  }
+
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -46,30 +61,32 @@ const CompanySection: React.FC = () => {
           </p>
         </div>
         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 items-center justify-items-center opacity-70 hover:opacity-100 transition-opacity duration-300">
-          {companies.slice(0, 12).map((company, index) => (
-            <div
-              key={company.name}
-              className="group relative"
-            >
-              <div className="relative w-16 h-16 flex items-center justify-center bg-white rounded-lg hover:shadow-md transition-all duration-200 group-hover:scale-110 border border-gray-200">
-                <Image
-                  src={company.logo}
-                  alt={`${company.name} logo`}
-                  width={40}
-                  height={40}
-                  className="object-contain"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `<div class="text-xs font-semibold text-gray-600 text-center">${company.name.substring(0, 3)}</div>`;
-                    }
-                  }}
-                />
+          {companies.slice(0, 12).map((company, index) => {
+            const logoFailed = failedLogos.has(company.name)
+            return (
+              <div
+                key={company.name}
+                className="group relative"
+              >
+                <div className="relative w-24 h-24 flex items-center justify-center bg-white rounded-lg hover:shadow-md transition-all duration-200 group-hover:scale-110 border border-gray-200">
+                  {logoFailed ? (
+                    <div className="text-xs font-semibold text-gray-700 text-center px-2 leading-tight">
+                      {company.name}
+                    </div>
+                  ) : (
+                    <img
+                      src={logoSources.get(company.name) || company.logo}
+                      alt={`${company.name} logo`}
+                      className="w-12 h-12 object-contain"
+                      onError={() => handleImageError(company.name, company.fallbackLogo)}
+                      loading="lazy"
+                      crossOrigin="anonymous"
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         <div className="mt-16 text-center bg-white rounded-2xl p-8 shadow-sm">
           <h3 className="text-2xl font-bold text-gray-900 mb-4">

@@ -4,6 +4,7 @@ import './globals.css'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { AuthProvider } from '@/context/AuthContext'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'ResumeIT - AI-Powered Recruitment Platform',
@@ -23,13 +24,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthProvider>
-          <Navbar />
-          <main className="min-h-screen relative z-10">
-            {children}
-          </main>
-          <Footer />
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <Navbar />
+            <main className="min-h-screen relative z-10">
+              {children}
+            </main>
+            <Footer />
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

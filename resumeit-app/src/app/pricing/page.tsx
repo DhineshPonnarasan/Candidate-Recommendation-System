@@ -136,12 +136,12 @@ export default function PricingPage() {
               <SparklesIcon className="w-5 h-5 mr-2" />
               Simple, Transparent Pricing
             </motion.div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-8">
+            <h1 className="text-5xl md:text-7xl font-display font-bold mb-8">
               <span className="bg-gradient-to-r from-primary-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Choose Your Plan
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
+            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8 font-body">
               Start free, scale as you grow. No hidden fees, no long-term contracts, 
               and you can upgrade, downgrade, or cancel anytime.
             </p>
@@ -194,8 +194,8 @@ export default function PricingPage() {
                       {index === 1 && <SparklesIcon className="w-8 h-8" />}
                       {index === 2 && <ShieldCheckIcon className="w-8 h-8" />}
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                    <p className="text-gray-600 mb-6">{plan.description}</p>
+                    <h3 className="text-2xl font-display font-bold text-gray-900 mb-2">{plan.name}</h3>
+                    <p className="text-gray-600 mb-6 font-body">{plan.description}</p>
                     <div className="mb-6">
                       <span className="text-5xl font-bold text-gray-900">{plan.price}</span>
                       <span className="text-gray-500 ml-1">{plan.period}</span>
@@ -244,8 +244,8 @@ export default function PricingPage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Compare All Features</h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-6">Compare All Features</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto font-body">
               See how our plans stack up and find the perfect fit for your needs.
             </p>
           </motion.div>

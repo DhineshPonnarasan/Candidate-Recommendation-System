@@ -98,30 +98,320 @@ function containsToken(text: string, term: string): boolean {
   const re = new RegExp(`(^|[^A-Za-z0-9_])${escaped}([^A-Za-z0-9_]|$)`, "i");
   return re.test(text);
 }
+/**
+ * STAGE 1: Document Normalization
+ * Normalize whitespace, line breaks, and unicode characters
+ */
+function normalizeResumeText(text: string): string {
+  if (!text) return "";
+  
+  // Normalize line breaks
+  let normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // Normalize unicode whitespace
+  normalized = normalized.replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ');
+  
+  // Collapse multiple spaces to single space (but preserve line breaks)
+  normalized = normalized.replace(/[ \t]+/g, ' ');
+  
+  // Remove excessive line breaks (more than 2 consecutive)
+  normalized = normalized.replace(/\n{3,}/g, '\n\n');
+  
+  return normalized.trim();
+}
+
+/**
+ * STAGE 2: Structural Segmentation
+ * Split resume into header zone (first 5-7 meaningful lines) and body zone
+ */
+interface ResumeZones {
+  headerZone: string;
+  bodyZone: string;
+  headerLines: string[];
+}
+
+function segmentResume(text: string): ResumeZones {
+  const normalized = normalizeResumeText(text);
+  const lines = normalized.split(/\n+/);
+  
+  // Extract first 5-7 meaningful non-empty lines as header zone
+  const headerLines: string[] = [];
+  for (let i = 0; i < lines.length && headerLines.length < 7; i++) {
+    const line = lines[i].trim();
+    if (line && line.length >= 2) { // Meaningful line (at least 2 chars)
+      headerLines.push(line);
+    }
+  }
+  
+  const headerZone = headerLines.join('\n');
+  const bodyZone = lines.slice(headerLines.length).join('\n');
+  
+  return { headerZone, bodyZone, headerLines };
+}
+
+/**
+ * STAGE 3: Header-First Entity Extraction with Confidence Scoring
+ */
+interface ExtractionResult {
+  value: string;
+  confidence: number; // 0.0 to 1.0
+}
+
+interface EntityExtraction {
+  name: ExtractionResult;
+  email: ExtractionResult;
+  phone: ExtractionResult;
+  linkedin: ExtractionResult;
+}
+
+/**
+ * Extract and rank name candidates from header zone
+ */
+function extractNameWithConfidence(headerZone: string, headerLines: string[]): ExtractionResult {
+  if (!headerZone || headerZone.length < 10) {
+    return { value: "", confidence: 0.0 };
+  }
+  
+  const banned = /\b(RESUME|CURRICULUM|VITAE|CONTACT|SUMMARY|OBJECTIVE|EXPERIENCE|EDUCATION|SKILLS|PROJECTS|PHONE|EMAIL|ADDRESS|CITY|STATE|ZIP|COUNTRY|PAGE|DATE)\b/i;
+  const nameCandidates: Array<{ name: string; score: number }> = [];
+  
+  // Generate multiple name candidates from header lines
+  for (let lineIdx = 0; lineIdx < headerLines.length; lineIdx++) {
+    const line = headerLines[lineIdx];
+    
+    // Skip banned lines, contact info, metadata
+    if (banned.test(line)) continue;
+    if (/^[A-Z\s]{0,2}$/.test(line)) continue;
+    if (/@/.test(line) && !/^[A-Z][a-z]/.test(line)) continue;
+    if (/^https?:\/\//.test(line)) continue;
+    if (/^\+?\d[\d\s().-]{8,}/.test(line)) continue;
+    if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(line)) continue;
+    
+    // Pattern 1: Standard name format
+    const pattern1 = /^([A-Z][a-z]{1,25}(?:\s+[A-Z][a-zA-Z\-']{1,25}){1,3})\b/;
+    const match1 = line.match(pattern1);
+    if (match1) {
+      const candidate = match1[1].trim();
+      const words = candidate.split(/\s+/);
+      if (words.length >= 2 && words.length <= 4 && 
+          words.every(w => w.length >= 1 && /^[A-Z]/.test(w)) && 
+          !banned.test(candidate)) {
+        // Calculate confidence score
+        const capitalizationRatio = candidate.split('').filter(c => /[A-Z]/.test(c)).length / candidate.length;
+        const tokenCount = words.length;
+        const hasVerbs = /\b(is|are|was|were|has|have|had|do|does|did|can|could|will|would)\b/i.test(candidate);
+        const hasNumbers = /\d/.test(candidate);
+        const hasPunctuation = /[.,;:!?]/.test(candidate);
+        const positionScore = 1.0 - (lineIdx / headerLines.length) * 0.3; // Earlier lines score higher
+        
+        let score = 0.0;
+        if (capitalizationRatio >= 0.1 && capitalizationRatio <= 0.5) score += 0.3; // Good capitalization
+        if (tokenCount >= 2 && tokenCount <= 4) score += 0.3; // Good token count
+        if (!hasVerbs) score += 0.2; // No verbs
+        if (!hasNumbers) score += 0.1; // No numbers
+        if (!hasPunctuation) score += 0.1; // No punctuation
+        score *= positionScore; // Apply position multiplier
+        
+        nameCandidates.push({ name: candidate, score });
+      }
+    }
+    
+    // Pattern 2: All-caps names
+    const capsPattern = /^([A-Z]{2,}(?:\s+[A-Z]{2,}){1,3})\b/;
+    const capsMatch = line.match(capsPattern);
+    if (capsMatch && !banned.test(capsMatch[1])) {
+      const candidate = capsMatch[1].toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).trim();
+      const words = candidate.split(/\s+/);
+      if (words.length >= 2 && words.length <= 4) {
+        const positionScore = 1.0 - (lineIdx / headerLines.length) * 0.3;
+        nameCandidates.push({ name: candidate, score: 0.7 * positionScore });
+      }
+    }
+  }
+  
+  // Rank candidates by score and return best one
+  if (nameCandidates.length === 0) {
+    return { value: "", confidence: 0.0 };
+  }
+  
+  nameCandidates.sort((a, b) => b.score - a.score);
+  const best = nameCandidates[0];
+  
+  // More lenient threshold - accept if score >= 0.3 (matches CONFIDENCE_THRESHOLD)
+  // This allows names that are less perfect but still likely valid
+  return {
+    value: best.score >= 0.3 ? best.name : "", // Accept if confidence >= 0.3
+    confidence: best.score
+  };
+}
+
+/**
+ * Extract email with confidence scoring
+ */
+function extractEmailWithConfidence(headerZone: string): ExtractionResult {
+  if (!headerZone) return { value: "", confidence: 0.0 };
+  
+  const emailPatterns = [
+    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+    /[A-Z0-9._%+-]+\s*\[at\]\s*[A-Z0-9.-]+\s*\[dot\]\s*[A-Z]{2,}/gi,
+    /[A-Z0-9._%+-]+\s*at\s*[A-Z0-9.-]+\s*dot\s*[A-Z]{2,}/gi,
+  ];
+  
+  for (const pattern of emailPatterns) {
+    const match = headerZone.match(pattern);
+    if (match && match[0]) {
+      let email = match[0]
+        .replace(/\s*\[at\]\s*/gi, "@")
+        .replace(/\s*at\s*/gi, "@")
+        .replace(/\s*\[dot\]\s*/gi, ".")
+        .replace(/\s*dot\s*/gi, ".")
+        .trim();
+      
+      if (email && /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email)) {
+        // High confidence for valid email format
+        return { value: email, confidence: 0.95 };
+      }
+    }
+  }
+  
+  return { value: "", confidence: 0.0 };
+}
+
+/**
+ * Extract phone with confidence scoring
+ */
+function extractPhoneWithConfidence(headerZone: string): ExtractionResult {
+  if (!headerZone) return { value: "", confidence: 0.0 };
+  
+  const phonePatterns = [
+    /\+?1?[\s.-]?\(?([2-9]\d{2})\)?[\s.-]?([2-9]\d{2})[\s.-]?(\d{4})\b/g,
+    /\+\d{1,3}[\s.-]?\d{1,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4}\b/g,
+    /\b([2-9]\d{1,2}[\s.-]?\d{3,4}[\s.-]?\d{3,4}[\s.-]?\d{0,4})\b/g,
+  ];
+  
+  for (const pattern of phonePatterns) {
+    const matches = [...headerZone.matchAll(pattern)];
+    for (const match of matches) {
+      const candidate = match[0];
+      const digits = candidate.replace(/\D/g, '');
+      
+      // Validation
+      if (digits.length < 10 || digits.length > 15) continue;
+      if (/^(19|20)\d{2}$/.test(digits)) continue;
+      if (/^(\d)\1{6,}$/.test(digits)) continue;
+      if (/^0+$/.test(digits)) continue;
+      
+      const digitVariety = new Set(digits).size;
+      if (digitVariety < 3) continue;
+      
+      const phone = normalizePhone(candidate);
+      // High confidence for validated phone
+      return { value: phone, confidence: 0.9 };
+    }
+  }
+  
+  return { value: "", confidence: 0.0 };
+}
+
+/**
+ * Extract LinkedIn with confidence scoring
+ */
+function extractLinkedInWithConfidence(headerZone: string): ExtractionResult {
+  if (!headerZone) return { value: "", confidence: 0.0 };
+  
+  const linkedinPatterns = [
+    /https?:\/\/[^\s]*linkedin\.com\/in\/[^\s)]+/i,
+    /https?:\/\/[^\s]*linkedin\.com\/profile\/[^\s)]+/i,
+    /\b(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9._%-]{3,60}/i,
+    /linkedin\.com\/in\/([A-Za-z0-9._%-]{3,60})/i,
+  ];
+  
+  for (const pattern of linkedinPatterns) {
+    const match = headerZone.match(pattern);
+    if (match) {
+      let linkedin = "";
+      if (match[0].startsWith('http')) {
+        linkedin = match[0];
+      } else if (match[1]) {
+        linkedin = `https://linkedin.com/in/${match[1]}`;
+      } else {
+        linkedin = `https://${match[0]}`;
+      }
+      
+      if (linkedin && !/^https?:\/\//i.test(linkedin)) {
+        linkedin = `https://${linkedin.replace(/^www\./i, "")}`;
+      }
+      
+      return { value: linkedin, confidence: 0.85 };
+    }
+  }
+  
+  // Try extracting handle from text like "LinkedIn: username"
+  const handle = headerZone.match(/linkedin\s*[:\-]?\s*(?:profile|url)?\s*[:\-]?\s*@?([A-Za-z0-9._-]{3,60})/i)?.[1];
+  if (handle && !handle.includes('@') && !handle.includes('http')) {
+    return { value: `https://linkedin.com/in/${handle}`, confidence: 0.7 };
+  }
+  
+  return { value: "", confidence: 0.0 };
+}
+
+/**
+ * STAGE 3: Header-First Entity Extraction (Main Function)
+ */
+function extractEntitiesFromHeader(text: string): EntityExtraction {
+  const zones = segmentResume(text);
+  
+  return {
+    name: extractNameWithConfidence(zones.headerZone, zones.headerLines),
+    email: extractEmailWithConfidence(zones.headerZone),
+    phone: extractPhoneWithConfidence(zones.headerZone),
+    linkedin: extractLinkedInWithConfidence(zones.headerZone),
+  };
+}
+
+/**
+ * STAGE 4: Confidence Gating
+ * Accept fields only if confidence >= threshold
+ * Lowered from 0.5 to 0.3 to be more lenient for name extraction
+ */
+const CONFIDENCE_THRESHOLD = 0.3;
+
+function applyConfidenceGating(extraction: EntityExtraction): { email: string; phone: string; linkedin: string; name: string } {
+  return {
+    name: extraction.name.confidence >= CONFIDENCE_THRESHOLD ? extraction.name.value : "",
+    email: extraction.email.confidence >= CONFIDENCE_THRESHOLD ? extraction.email.value : "",
+    phone: extraction.phone.confidence >= CONFIDENCE_THRESHOLD ? extraction.phone.value : "",
+    linkedin: extraction.linkedin.confidence >= CONFIDENCE_THRESHOLD ? extraction.linkedin.value : "",
+  };
+}
+
+/**
+ * Public API: Extract contact info from text (FAANG-style pipeline)
+ */
+/**
+ * Public API: Extract contact info from text (FAANG-style pipeline)
+ */
 export function extractContactInfoFromText(text: string) {
-  const email =
-    text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)?.[0] || "";
-  const rawPhone =
-    text.match(/\+?\d?[\s.-]?(?:\(\d{2,4}\)|\d{2,4})[\s.-]?\d{3,4}[\s.-]?\d{3,4}/g)?.[0] ||
-    text.match(/\+?\d[\d\s().-]{8,16}\d/g)?.[0] || "";
-  const phone = normalizePhone(rawPhone);
-  let linkedin =
-    text.match(/https?:\/\/[^\s]*linkedin\.com\/[^\s)]+/i)?.[0] ||
-    text.match(/\b(?:www\.)?linkedin\.com\/[^\s)]+/i)?.[0] ||
-    "";
-  if (!linkedin) {
-    const squashed = text.replace(/\s+/g, "");
-    const broken = squashed.match(/linkedin\.com\/in\/([A-Za-z0-9._%-]{3,60})/i);
-    if (broken) linkedin = `https://linkedin.com/in/${broken[1]}`;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:388',message:'extractContactInfoFromText entry',data:{textLength:text?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  if (!text || text.trim().length < 10) {
+    return { email: "", phone: "", linkedin: "" };
   }
-  if (!linkedin) {
-    const handle = text.match(/linkedin\s*[:\-]?\s*@?([A-Za-z0-9._-]{3,60})/i)?.[1];
-    if (handle) linkedin = `https://linkedin.com/in/${handle}`;
-  }
-  if (linkedin && !/^https?:\/\//i.test(linkedin)) {
-    linkedin = `https://${linkedin.replace(/^www\./i, "www.")}`;
-  }
-  return { email, phone, linkedin };
+  
+  const extraction = extractEntitiesFromHeader(text);
+  const gated = applyConfidenceGating(extraction);
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:397',message:'extractContactInfoFromText: extraction result',data:{email:gated.email,phone:gated.phone,linkedin:gated.linkedin,emailConfidence:extraction.email.confidence,phoneConfidence:extraction.phone.confidence},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  return {
+    email: gated.email,
+    phone: gated.phone,
+    linkedin: gated.linkedin,
+  };
 }
 function normalizePhone(p?: string) {
   if (!p) return "";
@@ -133,39 +423,70 @@ function normalizePhone(p?: string) {
   if (/^\+\d{8,15}$/.test(digits)) return digits;
   return p;
 }
+/**
+ * Public API: Extract candidate name from text (FAANG-style pipeline)
+ * Uses header-first extraction with confidence scoring
+ */
 export function extractCandidateNameFromText(text: string): string {
-  if (!text) return "Unknown Candidate";
-  const head = text.slice(0, 700).replace(/\s+/g, " ").trim();
-  const headStrip = head
-    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, " ")
-    .replace(/https?:\/\/\S+/gi, " ")
-    .replace(/\+?\d[\d\s().-]{8,}/g, " ");
-  const banned = /\b(RESUME|CURRICULUM|VITAE|CONTACT|SUMMARY|OBJECTIVE|EXPERIENCE|EDUCATION|SKILLS|PROJECTS)\b/i;
-  const locPat = /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z\-']+){1,4})\s+[A-Z][a-zA-Z]+,\s*(?:[A-Z]{2,3}|[A-Z][a-zA-Z]+)\b/;
-  const locMatch = head.match(locPat);
-  if (locMatch && !banned.test(locMatch[1])) return locMatch[1].trim();
-  const tcStart = headStrip.match(/^([A-Z][a-z]{2,20}(?:\s+[A-Z][a-zA-Z\-']{2,20}){1,4})\b/);
-  if (tcStart && !banned.test(tcStart[1])) return tcStart[1].trim();
-  const tcAny = headStrip.match(/\b([A-Z][a-z]{2,20}(?:\s+[A-Z][a-zA-Z\-']{2,20}){1,4})\b/);
-  if (tcAny && !banned.test(tcAny[1])) return tcAny[1].trim();
-  const caps = head.match(/\b([A-Z]{2,}(?:\s+[A-Z]{2,}){1,4})\b/);
-  if (caps && !banned.test(caps[1])) {
-    return caps[1].toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).trim();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:419',message:'extractCandidateNameFromText entry',data:{textLength:text?.length || 0,textPreview:text?.substring(0,100) || ''},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  if (!text || text.trim().length < 10) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:422',message:'extractCandidateNameFromText: text too short',data:{textLength:text?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    return "Unknown Candidate";
   }
-  const li = text.match(/linkedin\.com\/in\/([A-Za-z0-9._-]{3,80})/i)?.[1];
+  
+  // Use the FAANG-style pipeline
+  const extraction = extractEntitiesFromHeader(text);
+  const gated = applyConfidenceGating(extraction);
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:428',message:'extractCandidateNameFromText: extraction result',data:{extractedName:gated.name,confidence:extraction.name.confidence,textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  // If name extraction succeeded, return it
+  if (gated.name && gated.name.length > 0) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:432',message:'extractCandidateNameFromText: returning extracted name',data:{name:gated.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    return gated.name;
+  }
+  
+  // Fallback strategies (only if header extraction failed)
+  const zones = segmentResume(text);
+  
+  // Fallback 1: Extract from LinkedIn URL in header
+  const liMatch = zones.headerZone.match(/linkedin\.com\/in\/([A-Za-z0-9._-]{3,80})/i);
+  const li = liMatch?.[1];
   if (li) {
-    const titled = li.replace(/[_.-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()).trim();
-    if (titled.split(" ").length >= 2) return titled;
-  }
-  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)?.[0];
-  if (email) {
-    const local = email.split("@")[0].replace(/[._-]+/g, " ").replace(/\d+/g, "").trim();
-    if (local && local.split(" ").length >= 2) {
-      return local.replace(/\b\w/g, c => c.toUpperCase());
+    const titled = li.replace(/[_.-]+/g, " ").replace(/\d+/g, "").replace(/\b\w/g, c => c.toUpperCase()).trim();
+    const words = titled.split(/\s+/).filter(w => w.length > 1);
+    if (words.length >= 2 && words.length <= 4) {
+      return words.join(" ");
     }
   }
+  
+  // Fallback 2: Extract from email local part in header
+  const emailMatch = zones.headerZone.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
+  const email = emailMatch?.[0];
+  if (email) {
+    const local = email.split("@")[0].replace(/[._-]+/g, " ").replace(/\d+/g, "").trim();
+    const words = local.split(/\s+/).filter(w => w.length > 1);
+    if (words.length >= 2 && words.length <= 4) {
+      return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    }
+  }
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:456',message:'extractCandidateNameFromText: returning Unknown Candidate',data:{textLength:text.length,fallbackAttempted:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
   return "Unknown Candidate";
 }
+
 export function extractNameFromFilename(filename: string): string {
   if (!filename) return "Unknown Candidate";
   const base = filename.replace(/\.[^.]+$/, "");
@@ -298,3 +619,4 @@ function extractExperienceHighlights(text: string): string[] {
   }
   return out;
 }
+

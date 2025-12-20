@@ -9,6 +9,8 @@ import {
   CpuChipIcon,
   ClockIcon
 } from '@heroicons/react/24/outline'
+import Card from '@/components/ui/Card'
+import { motion } from 'framer-motion'
 const ContentSection = () => {
   const features = [
     {
@@ -67,12 +69,12 @@ const ContentSection = () => {
               <SparklesIcon className="w-5 h-5 mr-2" />
               Trusted by Industry Leaders
             </div>
-            <h2 className="text-4xl md:text-6xl font-bold mb-6">
+            <h2 className="text-4xl md:text-6xl font-display font-bold mb-6">
               <span className="bg-gradient-to-r from-primary-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Transforming Recruitment
               </span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-body">
               Our AI-powered platform has revolutionized how companies find and hire top talent, 
               delivering unprecedented results across industries.
             </p>
@@ -93,25 +95,31 @@ const ContentSection = () => {
         </div>
         <div className="mb-20">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900">
+            <h2 className="text-3xl md:text-5xl font-display font-bold mb-6 text-gray-900">
               Why Choose ResumeIT?
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-body">
               Experience the next generation of recruitment technology with features designed 
               to streamline your hiring process and improve candidate quality.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={feature.title} className="group">
-                <div className="bg-white rounded-2xl p-8 shadow-soft hover:shadow-medium transition-all duration-300 group-hover:scale-105 h-full">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl text-white mb-6 shadow-lg`}>
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+              >
+                <Card variant="elevated" hover className="h-full group">
+                  <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl text-white mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     {feature.icon}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                </div>
-              </div>
+                  <h3 className="text-xl font-display font-bold text-gray-900 mb-4">{feature.title}</h3>
+                  <p className="text-gray-600 leading-relaxed font-body">{feature.description}</p>
+                </Card>
+              </motion.div>
             ))}
           </div>
         </div>

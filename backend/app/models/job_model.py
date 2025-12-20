@@ -1,6 +1,6 @@
 from datetime import datetime
 import pickle
-from config.database import db_config
+from config.sqlite_database import db_config
 
 class JobDescription:
     """Job description model for storing and managing job postings"""

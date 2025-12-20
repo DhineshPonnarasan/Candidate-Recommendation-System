@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import Input from '@/components/ui/Input'
+import Card from '@/components/ui/Card'
 interface JobDescriptionInputProps {
   value: string
   onChange: (value: string) => void
@@ -124,34 +126,34 @@ Preferred Qualifications:
           </div>
         </div>
       </div>
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">📝 Quick Start Templates:</h3>
+      <Card variant="default" className="bg-gray-50">
+        <h3 className="font-display font-semibold text-gray-900 mb-3">📝 Quick Start Templates:</h3>
         <div className="grid md:grid-cols-3 gap-3">
           {sampleJobDescriptions.map((sample, index) => (
             <button
               key={index}
               onClick={() => useSampleDescription(sample)}
-              className="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors group"
+              className="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-all duration-200 group hover:shadow-sm"
             >
-              <h4 className="font-medium text-gray-900 group-hover:text-primary-700 text-sm">
+              <h4 className="font-display font-medium text-gray-900 group-hover:text-primary-700 text-sm">
                 {sample.title}
               </h4>
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-1 font-body">
                 Click to use this template
               </p>
             </button>
           ))}
         </div>
-      </div>
+      </Card>
       <div className="relative">
         <textarea
           value={value}
           onChange={handleChange}
           placeholder="Paste your job description here... Include role responsibilities, required skills, experience level, and any specific qualifications for the best AI analysis results."
-          className="w-full h-80 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none text-sm leading-relaxed"
+          className="w-full h-80 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-sm leading-relaxed font-body transition-all duration-200"
           maxLength={5000}
         />
-        <div className="absolute bottom-3 right-3 flex items-center space-x-4 text-sm text-gray-500">
+        <div className="absolute bottom-3 right-3 flex items-center space-x-4 text-sm text-gray-500 font-body">
           <span>{wordCount} words</span>
           <span>{charCount}/5000</span>
         </div>
@@ -162,8 +164,8 @@ Preferred Qualifications:
           animate={{ opacity: 1, y: 0 }}
           className="grid md:grid-cols-2 gap-4"
         >
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+          <Card variant="default">
+            <h4 className="font-display font-semibold text-gray-900 mb-3 flex items-center">
               📊 Description Quality
             </h4>
             <div className="space-y-3">
@@ -184,11 +186,11 @@ Preferred Qualifications:
                   }`}
                 />
               </div>
-              <p className="text-xs text-gray-600">{quality.description}</p>
+              <p className="text-xs text-gray-600 font-body">{quality.description}</p>
             </div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+          </Card>
+          <Card variant="default">
+            <h4 className="font-display font-semibold text-gray-900 mb-3 flex items-center">
               🤖 AI Analysis Preview
             </h4>
             <div className="space-y-3">
@@ -220,15 +222,15 @@ Preferred Qualifications:
                 </p>
               )}
             </div>
-          </div>
+          </Card>
         </motion.div>
       )}
       {value.trim() && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-green-50 border border-green-200 rounded-lg p-4"
         >
+          <Card variant="outlined" className="border-success-200 bg-success-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <span className="text-green-600 mr-2 text-lg">✓</span>
@@ -247,9 +249,10 @@ Preferred Qualifications:
               </div>
             )}
           </div>
+          </Card>
         </motion.div>
       )}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <Card variant="default" className="bg-blue-50 border-blue-200">
         <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
           💡 Tips for Better AI Analysis
         </h4>
@@ -275,19 +278,20 @@ Preferred Qualifications:
             </ul>
           </div>
         </div>
-      </div>
+      </Card>
       {charCount > 4500 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-orange-50 border border-orange-200 rounded-lg p-3"
         >
+          <Card variant="outlined" className="border-warning-200 bg-warning-50">
           <div className="flex items-center">
             <span className="text-orange-500 mr-2">⚠️</span>
             <span className="text-orange-700 text-sm">
               Approaching character limit ({charCount}/5000). Consider condensing for optimal performance.
             </span>
           </div>
+          </Card>
         </motion.div>
       )}
     </div>

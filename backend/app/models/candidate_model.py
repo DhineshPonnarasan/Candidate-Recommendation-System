@@ -1,6 +1,7 @@
 from datetime import datetime
 import pickle
-from config.database import db_config
+import json
+from config.sqlite_database import db_config
 
 class Candidate:
     """Candidate model for storing and managing candidate resumes"""
@@ -32,18 +33,35 @@ class Candidate:
             cursor = conn.cursor()
             embedding_binary = pickle.dumps(embedding) if embedding is not None else None
             
+            # SQLite: Convert skills list to JSON string, use ? placeholders, no RETURNING clause
+            import json
+            skills_json = json.dumps(skills) if skills else None
+            
             cursor.execute('''
                 INSERT INTO candidates (name, email, phone, skills, experience_years, 
                                       education, location, resume_text, file_path, embedding)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, name, email, phone, skills, experience_years, 
-                          education, location, is_active, created_at
-            ''', (name, email, phone, skills, experience_years, education, 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, email, phone, skills_json, experience_years, education, 
                   location, resume_text, file_path, embedding_binary))
             
-            result = cursor.fetchone()
+            candidate_id = cursor.lastrowid
             conn.commit()
-            return dict(result) if result else None
+            
+            # Fetch the inserted record
+            cursor.execute('''
+                SELECT id, name, email, phone, skills, experience_years, 
+                       education, location, is_active, created_at
+                FROM candidates WHERE id = ?
+            ''', (candidate_id,))
+            
+            result = cursor.fetchone()
+            if result:
+                candidate_data = dict(result)
+                # Convert skills JSON back to list
+                if candidate_data['skills']:
+                    candidate_data['skills'] = json.loads(candidate_data['skills'])
+                return candidate_data
+            return None
             
         except Exception as e:
             conn.rollback()
@@ -66,15 +84,18 @@ class Candidate:
                 SELECT id, name, email, phone, skills, experience_years, 
                        education, location, resume_text, file_path, embedding,
                        is_active, created_at, updated_at
-                FROM candidates WHERE id = %s
+                FROM candidates WHERE id = ?
             ''', (candidate_id,))
             
             result = cursor.fetchone()
             if result:
                 candidate_data = dict(result)
                 # Convert embedding from binary
-                if candidate_data['embedding']:
+                if candidate_data.get('embedding'):
                     candidate_data['embedding'] = pickle.loads(candidate_data['embedding'])
+                # Convert skills from JSON string to list
+                if candidate_data.get('skills'):
+                    candidate_data['skills'] = json.loads(candidate_data['skills'])
                 return candidate_data
             return None
             
@@ -98,11 +119,17 @@ class Candidate:
                 SELECT id, name, email, phone, skills, experience_years, 
                        education, location, resume_text, file_path,
                        is_active, created_at, updated_at
-                FROM candidates WHERE email = %s AND is_active = TRUE
+                FROM candidates WHERE email = ? AND is_active = 1
             ''', (email,))
             
             result = cursor.fetchone()
-            return dict(result) if result else None
+            if result:
+                candidate_data = dict(result)
+                # Convert skills from JSON string to list
+                if candidate_data.get('skills'):
+                    candidate_data['skills'] = json.loads(candidate_data['skills'])
+                return candidate_data
+            return None
             
         except Exception as e:
             print(f"Error finding candidate by email: {e}")
@@ -125,9 +152,9 @@ class Candidate:
                        education, location, resume_text, file_path, embedding,
                        created_at, updated_at
                 FROM candidates 
-                WHERE is_active = TRUE
+                WHERE is_active = 1
                 ORDER BY created_at DESC
-                LIMIT %s OFFSET %s
+                LIMIT ? OFFSET ?
             ''', (limit, offset))
             
             results = cursor.fetchall()
@@ -135,8 +162,11 @@ class Candidate:
             for row in results:
                 candidate_data = dict(row)
                 # Convert embedding from binary
-                if candidate_data['embedding']:
+                if candidate_data.get('embedding'):
                     candidate_data['embedding'] = pickle.loads(candidate_data['embedding'])
+                # Convert skills from JSON string to list
+                if candidate_data.get('skills'):
+                    candidate_data['skills'] = json.loads(candidate_data['skills'])
                 candidates.append(candidate_data)
             return candidates
             
@@ -160,9 +190,9 @@ class Candidate:
                 SELECT id, name, email, phone, skills, experience_years, 
                        education, location, resume_text, embedding
                 FROM candidates 
-                WHERE is_active = TRUE AND embedding IS NOT NULL
+                WHERE is_active = 1 AND embedding IS NOT NULL
                 ORDER BY created_at DESC
-                LIMIT %s
+                LIMIT ?
             ''', (limit,))
             
             results = cursor.fetchall()
@@ -170,8 +200,11 @@ class Candidate:
             for row in results:
                 candidate_data = dict(row)
                 # Convert embedding from binary
-                if candidate_data['embedding']:
+                if candidate_data.get('embedding'):
                     candidate_data['embedding'] = pickle.loads(candidate_data['embedding'])
+                # Convert skills from JSON string to list
+                if candidate_data.get('skills'):
+                    candidate_data['skills'] = json.loads(candidate_data['skills'])
                 candidates.append(candidate_data)
             return candidates
             
@@ -195,8 +228,8 @@ class Candidate:
             
             cursor.execute('''
                 UPDATE candidates 
-                SET embedding = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
+                SET embedding = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
             ''', (embedding_binary, candidate_id))
             
             conn.commit()
@@ -221,21 +254,32 @@ class Candidate:
             cursor = conn.cursor()
             search_query = f"%{query.lower()}%"
             
+            # SQLite: skills is stored as JSON string, use JSON_EXTRACT or LIKE on JSON
             cursor.execute('''
                 SELECT id, name, email, phone, skills, experience_years, 
                        education, location, created_at, updated_at
                 FROM candidates 
-                WHERE is_active = TRUE
-                AND (LOWER(name) LIKE %s 
-                     OR LOWER(email) LIKE %s 
-                     OR LOWER(location) LIKE %s
-                     OR EXISTS (SELECT 1 FROM unnest(skills) AS skill WHERE LOWER(skill) LIKE %s))
+                WHERE is_active = 1
+                AND (LOWER(name) LIKE ? 
+                     OR LOWER(email) LIKE ? 
+                     OR LOWER(location) LIKE ?
+                     OR LOWER(skills) LIKE ?)
                 ORDER BY created_at DESC
-                LIMIT %s
+                LIMIT ?
             ''', (search_query, search_query, search_query, search_query, limit))
             
             results = cursor.fetchall()
-            return [dict(row) for row in results]
+            candidates = []
+            for row in results:
+                candidate_data = dict(row)
+                # Convert skills from JSON string to list
+                if candidate_data.get('skills'):
+                    try:
+                        candidate_data['skills'] = json.loads(candidate_data['skills'])
+                    except (json.JSONDecodeError, TypeError):
+                        candidate_data['skills'] = []
+                candidates.append(candidate_data)
+            return candidates
             
         except Exception as e:
             print(f"Error searching candidates: {e}")
@@ -255,8 +299,8 @@ class Candidate:
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE candidates 
-                SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
+                SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
             ''', (candidate_id,))
             
             conn.commit()
@@ -280,16 +324,16 @@ class Candidate:
         try:
             cursor = conn.cursor()
             
-            # Total active candidates
-            cursor.execute('SELECT COUNT(*) FROM candidates WHERE is_active = TRUE')
+            # Total active candidates (SQLite uses 1/0 for boolean)
+            cursor.execute('SELECT COUNT(*) FROM candidates WHERE is_active = 1')
             total_candidates = cursor.fetchone()[0]
             
             # Candidates with embeddings
-            cursor.execute('SELECT COUNT(*) FROM candidates WHERE is_active = TRUE AND embedding IS NOT NULL')
+            cursor.execute('SELECT COUNT(*) FROM candidates WHERE is_active = 1 AND embedding IS NOT NULL')
             candidates_with_embeddings = cursor.fetchone()[0]
             
             # Average experience years
-            cursor.execute('SELECT AVG(experience_years) FROM candidates WHERE is_active = TRUE AND experience_years IS NOT NULL')
+            cursor.execute('SELECT AVG(experience_years) FROM candidates WHERE is_active = 1 AND experience_years IS NOT NULL')
             avg_experience = cursor.fetchone()[0]
             
             return {
