@@ -133,11 +133,14 @@ class ResumeService {
     }
   }
   async testConnection(): Promise<boolean> {
+    const healthUrl = `${this.baseURL}/api/health`;
+    console.log(`[ResumeService] Testing backend connection at: ${healthUrl}`);
+    
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      const response = await fetch(`${this.baseURL}/api/health`, {
+      const response = await fetch(healthUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -146,19 +149,24 @@ class ResumeService {
       });
       
       clearTimeout(timeoutId);
+      console.log(`[ResumeService] Health check response status: ${response.status}`);
       
       if (!response.ok) {
+        console.warn(`[ResumeService] Health check failed with status: ${response.status}`);
         return false;
       }
       
       // Try to parse JSON to ensure it's a valid response
       const data = await response.json().catch(() => null);
-      return data !== null;
+      console.log(`[ResumeService] Health check response:`, data);
+      const isConnected = data !== null;
+      console.log(`[ResumeService] Backend connected: ${isConnected}`);
+      return isConnected;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.warn('Backend connection test timed out after 5 seconds');
+        console.warn('[ResumeService] Backend connection test timed out after 5 seconds');
       } else {
-        console.warn('Backend connection test failed:', error);
+        console.warn('[ResumeService] Backend connection test failed:', error);
       }
       return false;
     }

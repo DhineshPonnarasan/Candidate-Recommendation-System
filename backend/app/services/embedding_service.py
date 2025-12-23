@@ -1,6 +1,18 @@
 import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    print("Warning: sentence_transformers not installed. Embedding features will be disabled.")
+    print("Install with: pip install sentence-transformers")
+    SentenceTransformer = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+try:
+    from sklearn.metrics.pairwise import cosine_similarity
+except ImportError:
+    cosine_similarity = None
+    
 from typing import List, Dict, Tuple, Optional
 import pickle
 import os
@@ -17,6 +29,11 @@ class EmbeddingService:
     
     def _load_model(self):
         """Load the sentence transformer model"""
+        if not SENTENCE_TRANSFORMERS_AVAILABLE or SentenceTransformer is None:
+            print("Sentence transformers not available - embedding features disabled")
+            self.model = None
+            return
+            
         try:
             print(f"Loading embedding model: {self.model_name}")
             self.model = SentenceTransformer(self.model_name)

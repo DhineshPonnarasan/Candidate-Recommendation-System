@@ -52,11 +52,17 @@ def create_app():
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin')
-        if origin in AppConfig.CORS_ORIGINS:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-        response.headers.add('Access-Control-Allow-Headers', ', '.join(AppConfig.CORS_ALLOW_HEADERS))
-        response.headers.add('Access-Control-Allow-Methods', ', '.join(AppConfig.CORS_METHODS))
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        # Check if origin is in allowed list (strip whitespace for safety)
+        allowed_origins = [o.strip() for o in AppConfig.CORS_ORIGINS]
+        if origin and origin.strip() in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+        elif origin:
+            # For development, allow any localhost origin
+            if 'localhost' in origin or '127.0.0.1' in origin:
+                response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = ', '.join(AppConfig.CORS_ALLOW_HEADERS)
+        response.headers['Access-Control-Allow-Methods'] = ', '.join(AppConfig.CORS_METHODS)
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
         return response
     
     # Initializing database
@@ -85,6 +91,25 @@ def create_app():
             'message': 'ResumeIT API is running',
             'version': '1.0.0'
         }), 200
+    
+    # Resume parsing routes - all point to the same handler
+    # These provide multiple access paths for compatibility
+    from routes.candidate_routes import upload_candidate_resume
+    
+    @app.route('/api/parse', methods=['POST', 'OPTIONS'])
+    def api_parse():
+        """Resume parsing endpoint - forwards to candidate upload"""
+        return upload_candidate_resume()
+    
+    @app.route('/api/analyze', methods=['POST', 'OPTIONS'])
+    def api_analyze():
+        """Resume analysis endpoint - forwards to candidate upload"""
+        return upload_candidate_resume()
+    
+    @app.route('/resume/parse', methods=['POST', 'OPTIONS'])
+    def resume_parse():
+        """Resume parse endpoint - forwards to candidate upload"""
+        return upload_candidate_resume()
     
     # Error handlers
     @app.errorhandler(404)

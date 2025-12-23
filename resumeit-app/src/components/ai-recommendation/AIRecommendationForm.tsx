@@ -10,7 +10,6 @@ import {
   calculateSemanticSimilarity,
   extractContactInfoFromText,
   extractCandidateNameFromText,
-  extractNameFromFilename,
   extractSkillsBasic,
   generateCandidateSummary,
 } from '@/features/matching/utils/aiUtils';
@@ -158,9 +157,13 @@ const AIRecommendationForm = () => {
                   const aggressiveMatch = firstLine.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/);
                   if (aggressiveMatch) {
                     finalName = aggressiveMatch[1];
-                    console.log(`[BACKEND] Aggressive extraction found name: "${finalName}"`);
                   }
                 }
+              }
+              
+              // FAANG CORRECTNESS: Block if identity extraction failed
+              if (!finalName || finalName === 'Unknown Candidate' || finalName.trim().length < 3) {
+                throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
               }
               
               // Use backend contact info directly (backend extraction is more reliable)
@@ -232,79 +235,14 @@ const AIRecommendationForm = () => {
             // #endregion
           }
         } catch (e) {
+          // FAANG CORRECTNESS: Any processing error blocks the file
+          // Prefer no output over incorrect output
           console.error(`Error processing ${file.name}:`, e);
           const errorMsg = e instanceof Error ? e.message : String(e);
-          const fileExt = file.name.split('.').pop()?.toLowerCase();
           
-          // Check if error is about backend being required
-          if (errorMsg.includes('Backend required') || errorMsg.includes('Backend server is required')) {
-            // Don't create fallback candidate - show error to user instead
-            setError(`Cannot process ${fileExt?.toUpperCase()} file "${file.name}" without backend server. Please start the backend server (run "python app.py" in the backend directory) and try again.`);
-            continue; // Skip this file
-          }
-          
-          // For other errors, try to create a fallback candidate
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AIRecommendationForm.tsx:242',message:'ERROR HANDLER: exception caught',data:{fileName:file.name,errorMessage:errorMsg},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          
-          // Only try client-side extraction for TXT files
-          let errorResumeText = '';
-          let errorName = '';
-          let errorEmail = '';
-          let errorPhone = '';
-          let errorLinkedin = '';
-          
-          if (fileExt === 'txt') {
-            try {
-              // Last-ditch attempt for TXT files only
-              errorResumeText = await file.text();
-              if (errorResumeText && errorResumeText.length > 0) {
-                const errorContact = extractContactInfoFromText(errorResumeText);
-                errorName = extractCandidateNameFromText(errorResumeText);
-                errorEmail = errorContact.email || '';
-                errorPhone = errorContact.phone || '';
-                errorLinkedin = errorContact.linkedin || '';
-              }
-            } catch (extractError) {
-              console.warn('Last-ditch extraction failed:', extractError);
-            }
-          }
-          
-          // Use extracted values if available, otherwise filename fallback
-          const fallbackName = errorName && errorName !== 'Unknown Candidate' 
-            ? errorName 
-            : extractNameFromFilename(file.name) || 'Unknown Candidate';
-          
-          // Create error message based on file type
-          let errorSummary = `Unable to process resume file "${file.name}". `;
-          if (fileExt === 'pdf' || fileExt === 'docx' || fileExt === 'doc') {
-            errorSummary += `Backend server is required for ${fileExt.toUpperCase()} file parsing. Please start the backend server and try again.`;
-          } else {
-            errorSummary += `Error: ${errorMsg}. Please check the file and try again.`;
-          }
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AIRecommendationForm.tsx:275',message:'ERROR HANDLER: creating fallback candidate',data:{fileName:file.name,errorMessage:errorMsg,fallbackName,errorResumeTextLength:errorResumeText.length,hasExtractedText:errorResumeText.length>0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          
-          // INVARIANT 3: Create single canonical candidate object
-          parsed.push({
-            id: `cand_${i}_${Date.now()}`,
-            name: fallbackName,
-            email: errorEmail,
-            phone: errorPhone,
-            linkedin: errorLinkedin,
-            similarity: 0,
-            skills: [],
-            summary: errorSummary,
-            fileName: file.name,
-            content: errorResumeText,
-          });
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AIRecommendationForm.tsx:295',message:'ERROR HANDLER: fallback candidate pushed',data:{name:fallbackName,email:errorEmail,phone:errorPhone,linkedin:errorLinkedin,parsedLength:parsed.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
+          // Set error and skip this file - no fallback candidates
+          setError(`Parsing blocked for "${file.name}": ${errorMsg}`);
+          continue;
         }
       }
       parsed.sort((a, b) => b.similarity - a.similarity);
@@ -366,20 +304,9 @@ const AIRecommendationForm = () => {
       throw new Error(`Failed to read TXT file: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
     
+    // FAANG CORRECTNESS: If text extraction fails, throw error - block analysis
     if (!resumeText || resumeText.length === 0) {
-      const fallbackName = extractNameFromFilename(file.name);
-      return {
-        id: `cand_${index}_${Date.now()}`,
-        name: fallbackName || 'Unknown Candidate',
-        email: '',
-        phone: '',
-        linkedin: '',
-        similarity: 0,
-        skills: [],
-        summary: `Unable to extract text from "${file.name}". The file appears to be empty.`,
-        fileName: file.name,
-        content: '',
-      };
+      throw new Error(`Text extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
     }
     // STAGE 3-4: Header-First Entity Extraction with Confidence Gating
     // This follows FAANG-style pipeline: extract from header zone only, apply confidence gating
@@ -397,68 +324,31 @@ const AIRecommendationForm = () => {
     // Filename fallback logic moved below to INVARIANT 1 enforcement section
     // (removed duplicate fallback logic)
     
-    // INVARIANT 1 ENFORCEMENT: Identity must exist if resume text exists
-    // If resume text length > 0, candidate name MUST NOT be "Unknown Candidate"
-    // Filename fallback is ONLY allowed if text extraction failed (< 50 chars)
+    // FAANG CORRECTNESS: Identity MUST be extracted from resume text
+    // If extraction fails, block analysis - prefer no output over incorrect output
     let finalName: string;
     
-    // INVARIANT 4: Fallback is terminal - filename fallback executes ONLY ONCE here
-    const filenameFallbackExecuted = resumeText.length < 50 && candidateName === 'Unknown Candidate';
-    if (filenameFallbackExecuted) {
-      const filenameName = extractNameFromFilename(file.name);
-      const words = filenameName.split(/\s+/);
-      if (words.length >= 2 && words.length <= 4 && 
-          words.every(w => /^[A-Z][a-z]+$/.test(w))) {
-        candidateName = filenameName;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AIRecommendationForm.tsx:361',message:'filename fallback executed (terminal)',data:{filenameName,resumeTextLength:resumeText.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-      }
-    }
-    
-    // INVARIANT 1: Enforce identity existence
-    if (resumeText.length > 0) {
-      // We have text - name MUST exist (either extracted or filename fallback)
-      if (candidateName && candidateName !== 'Unknown Candidate' && candidateName.trim().length > 0) {
-        finalName = candidateName; // INVARIANT 2: Immutable after assignment
-      } else {
-        // CRITICAL: This violates INVARIANT 1 - try aggressive extraction
-        console.error(`[INVARIANT 1 VIOLATION] Client-side: Resume text exists (${resumeText.length} chars) but name extraction failed. Text preview: ${resumeText.substring(0, 300)}`);
-        
-        // Aggressive extraction: try first line
-        const firstLine = resumeText.split(/\n/)[0]?.trim();
-        if (firstLine && firstLine.length > 5 && firstLine.length < 100) {
-          const aggressiveMatch = firstLine.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+){0,2})/);
-          if (aggressiveMatch && aggressiveMatch[1]) {
-            const aggressiveName = aggressiveMatch[1].trim();
-            const words = aggressiveName.split(/\s+/);
-            if (words.length >= 2 && words.length <= 4) {
-              finalName = aggressiveName;
-              console.log(`[CLIENT-SIDE] Aggressive extraction found name: "${finalName}"`);
-            } else {
-              finalName = 'Unknown Candidate';
-            }
+    if (candidateName && candidateName !== 'Unknown Candidate' && candidateName.trim().length > 2) {
+      finalName = candidateName;
+    } else {
+      // Try aggressive extraction from first line
+      const firstLine = resumeText.split(/\n/)[0]?.trim();
+      if (firstLine && firstLine.length > 5 && firstLine.length < 100) {
+        const aggressiveMatch = firstLine.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+){0,2})/);
+        if (aggressiveMatch && aggressiveMatch[1]) {
+          const aggressiveName = aggressiveMatch[1].trim();
+          const words = aggressiveName.split(/\s+/);
+          if (words.length >= 2 && words.length <= 4) {
+            finalName = aggressiveName;
           } else {
-            finalName = 'Unknown Candidate';
+            // FAANG CORRECTNESS: Block analysis - identity extraction failed
+            throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
           }
         } else {
-          finalName = 'Unknown Candidate';
+          throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
         }
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AIRecommendationForm.tsx:448',message:'INVARIANT 1 VIOLATION detected (client-side)',data:{resumeTextLength:resumeText.length,candidateName,finalName,firstLine:firstLine?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-      }
-    } else {
-      // No text - filename fallback is acceptable (text extraction failed)
-      const filenameName = extractNameFromFilename(file.name);
-      const words = filenameName.split(/\s+/);
-      if (words.length >= 2 && words.length <= 4 && 
-          words.every(w => /^[A-Z][a-z]+$/.test(w))) {
-        finalName = filenameName;
-        console.log(`[CLIENT-SIDE] Using filename fallback (text extraction failed): "${finalName}"`);
       } else {
-        finalName = 'Unknown Candidate';
+        throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
       }
     }
     
@@ -553,8 +443,8 @@ const AIRecommendationForm = () => {
               <CpuChipIcon className="w-5 h-5" />
               <span className="font-medium">
                 {apiStatus === 'connected'
-                  ? 'Backend API Connected — Enhanced Resume Processing Active'
-                  : 'Backend Offline — Using Client-Side Processing (Limited Accuracy)'}
+                  ? 'Backend API Connected — Full Resume Processing Active'
+                  : 'Backend Offline — PDF/DOCX Processing Unavailable'}
               </span>
             </div>
             {apiStatus === 'connected' && (
@@ -570,10 +460,10 @@ const AIRecommendationForm = () => {
             {apiStatus === 'disconnected' && (
               <div className="text-sm mt-2 space-y-1">
                 <p>
-                  Falling back to browser-based processing. Some PDFs may not parse correctly.
+                  <strong>PDF/DOCX parsing unavailable without backend to preserve correctness.</strong>
                 </p>
-                <p className="font-medium text-yellow-900">
-                  ⚠️ Note: Files are NOT saved permanently. They're only processed in your browser and will be lost if you refresh the page.
+                <p>
+                  Only TXT files can be processed. Start backend: <code className="bg-yellow-100 px-1 rounded">cd backend && python run.py</code>
                 </p>
               </div>
             )}

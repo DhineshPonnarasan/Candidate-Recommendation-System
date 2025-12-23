@@ -1,10 +1,18 @@
 import os
-import redis
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    print("Warning: redis not installed. Caching will be disabled.")
+    redis = None
+    REDIS_AVAILABLE = False
 import json
 import pickle
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 class RedisConfig:
     """Redis cache configuration and operations"""
@@ -18,6 +26,8 @@ class RedisConfig:
         
     def get_client(self, decode_responses=True):
         """Create and return a Redis client"""
+        if not REDIS_AVAILABLE or redis is None:
+            return None
         try:
             client = redis.Redis(
                 host=self.host,
@@ -31,7 +41,7 @@ class RedisConfig:
             # Test connection
             client.ping()
             return client
-        except redis.ConnectionError:
+        except (redis.ConnectionError, Exception):
             print("Warning: Redis connection failed. Cache functionality will be disabled.")
             return None
     

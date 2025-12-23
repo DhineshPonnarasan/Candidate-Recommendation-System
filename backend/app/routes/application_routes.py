@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date
-from config.database import db_config
+from config.sqlite_database import db_config
 
 application_bp = Blueprint('applications', __name__)
 

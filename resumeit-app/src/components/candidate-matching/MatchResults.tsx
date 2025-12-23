@@ -91,7 +91,7 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
       <div className="space-y-4">
         {displayedResults.map((r, i) => {
           const safeKey = `${r.id || 'cand'}-${r.fileName || 'file'}-${r.rank ?? i}`
-          const displayName = r.name?.trim() || 'Unknown Candidate'
+          const displayName = r.name?.trim()
           const displayEmail = r.email?.trim() || 'Not specified'
           const displayPhone = r.phone?.trim() || 'Not specified'
           const normalizedLinkedIn = r.linkedin && r.linkedin !== 'Not specified' ? normalizeLink(r.linkedin) : ''

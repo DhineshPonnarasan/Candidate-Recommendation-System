@@ -16,10 +16,16 @@ class AppConfig:
     ALLOWED_EXTENSIONS = set(os.getenv('ALLOWED_EXTENSIONS', 'pdf,doc,docx,txt').split(','))
     
     # CORS Configuration - Support both localhost and 127.0.0.1 for all development ports
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 
-        'http://localhost:3000,http://localhost:3001,http://localhost:3002,'
-        'http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002,'
-        'http://localhost:3003,http://127.0.0.1:3003').split(',')
+    CORS_ORIGINS = [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:3002',
+        'http://localhost:3003',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'http://127.0.0.1:3002',
+        'http://127.0.0.1:3003',
+    ]
     
     # CORS Headers Configuration
     CORS_ALLOW_HEADERS = [

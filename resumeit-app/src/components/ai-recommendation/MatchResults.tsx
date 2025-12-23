@@ -116,7 +116,7 @@ const MatchResults = ({ results, isLoading, jobTitle }: Props) => {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-display font-bold text-gray-900">{displayName || 'Unknown Candidate'}</h3>
+                    <h3 className="text-lg font-display font-bold text-gray-900">{displayName}</h3>
                     {i === 0 && (
                       <span className="bg-yellow-100 text-yellow-800 text-xs font-display font-medium px-2 py-0.5 rounded-full">
                         🏆 Top Match

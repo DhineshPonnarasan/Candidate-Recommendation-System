@@ -10,7 +10,6 @@ import {
   calculateSemanticSimilarity,
   extractContactInfoFromText,
   extractCandidateNameFromText,
-  extractNameFromFilename,
   extractSkillsBasic,
   generateCandidateSummary,
 } from '@/features/matching/utils/aiUtils';
@@ -90,16 +89,26 @@ const AIRecommendationForm = () => {
               const backendResult = await resumeService.uploadResume(file);
               setProcessingStep(`Calculating similarity for ${file.name}`);
               const similarity = await calculateSemanticSimilarity(jobDescription, backendResult.resume_text);
+              
+              // FAANG CORRECTNESS: Identity MUST be extracted - block if failed
+              let finalName = backendResult.name && backendResult.name !== 'Unknown Candidate' 
+                ? backendResult.name 
+                : extractCandidateNameFromText(backendResult.resume_text);
+              
+              if (!finalName || finalName === 'Unknown Candidate' || finalName.trim().length < 3) {
+                throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
+              }
+              
               candidateData = {
                 id: `cand_${i}_${Date.now()}`,
-                name: backendResult.name || extractNameFromFilename(file.name),
+                name: finalName,
                 email: backendResult.email || '',
                 phone: backendResult.phone || '',
-                linkedin: '', // Backend doesn't extract LinkedIn yet
+                linkedin: '',
                 similarity: similarity,
                 skills: backendResult.skills || [],
                 summary: generateCandidateSummary({
-                  name: backendResult.name || extractNameFromFilename(file.name),
+                  name: finalName,
                   resumeText: backendResult.resume_text,
                   jobText: jobDescription,
                   similarity: similarity,
@@ -123,20 +132,13 @@ const AIRecommendationForm = () => {
           }
           parsed.push(candidateData);
         } catch (e) {
+          // FAANG CORRECTNESS: Block analysis - do NOT produce candidates with failed extraction
           console.error(`Error processing ${file.name}:`, e);
-          const fallbackName = extractNameFromFilename(file.name);
-          parsed.push({
-            id: `cand_${i}_${Date.now()}`,
-            name: fallbackName || 'Unknown Candidate',
-            email: '',
-            phone: '',
-            linkedin: '',
-            similarity: 0,
-            skills: [],
-            summary: `Unable to process resume file "${file.name}". This could be due to a corrupted file, unsupported format, or parsing error. Please try re-uploading the file or converting it to a different format.`,
-            fileName: file.name,
-            content: '',
-          });
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          
+          // Show error but don't create fake candidate - prefer no output over incorrect output
+          setProcessingStep(`Blocked: ${file.name} - ${errorMsg}`);
+          continue;
         }
       }
       parsed.sort((a, b) => b.similarity - a.similarity);
@@ -151,38 +153,29 @@ const AIRecommendationForm = () => {
     }
   };
   const processResumeClientSide = async (file: File, index: number, jobDesc: string): Promise<Candidate> => {
-    console.log(`Client-side processing for: ${file.name}, type: ${file.type}, size: ${file.size}`);
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    
+    // FAANG CONTRACT: Client-side only supports TXT files
+    if (fileExt !== 'txt') {
+      throw new Error(`PDF/DOCX parsing unavailable without backend to preserve correctness.`);
+    }
+    
     const resumeText = await parseResume(file);
-    console.log(`Extracted text length: ${resumeText.length} characters`);
+    
+    // FAANG CORRECTNESS: Block if text extraction fails
     if (!resumeText || resumeText.length === 0) {
-      console.warn(`No text extracted from ${file.name}`);
-      const fallbackName = extractNameFromFilename(file.name);
-      let errorMessage = `Unable to extract text from "${file.name}". `;
-      if (file.type.includes('pdf')) {
-        errorMessage += 'This PDF may be image-based, password-protected, or corrupted. Try converting it to a text-based PDF or DOCX format.';
-      } else if (file.type.includes('doc')) {
-        errorMessage += 'This document format may not be supported. Try saving it as a DOCX or PDF file.';
-      } else {
-        errorMessage += 'The file format may not be supported or the file may be corrupted.';
-      }
-      return {
-        id: `cand_${index}_${Date.now()}`,
-        name: fallbackName || 'Unknown Candidate',
-        email: '',
-        phone: '',
-        linkedin: '',
-        similarity: 0,
-        skills: [],
-        summary: errorMessage,
-        fileName: file.name,
-        content: '',
-      };
+      throw new Error(`Text extraction failed for "${file.name}". Analysis blocked.`);
     }
+    
+    // Run FULL parsing pipeline
     const contact = extractContactInfoFromText(resumeText);
-    let candidateName = extractCandidateNameFromText(resumeText);
-    if (!candidateName || candidateName === 'Unknown Candidate' || candidateName.length < 3) {
-      candidateName = extractNameFromFilename(file.name);
+    const candidateName = extractCandidateNameFromText(resumeText);
+    
+    // FAANG CORRECTNESS: Block if identity extraction fails
+    if (!candidateName || candidateName === 'Unknown Candidate' || candidateName.trim().length < 3) {
+      throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
     }
+    
     const skills = extractSkillsBasic(resumeText);
     setProcessingStep(`Calculating similarity for ${file.name}`);
     const sim = await calculateSemanticSimilarity(jobDesc, resumeText);
@@ -194,6 +187,7 @@ const AIRecommendationForm = () => {
       contact: contact,
       skills: skills,
     });
+    
     return {
       id: `cand_${index}_${Date.now()}`,
       name: candidateName,
@@ -242,8 +236,8 @@ const AIRecommendationForm = () => {
               <CpuChipIcon className="w-5 h-5" />
               <span className="font-medium">
                 {apiStatus === 'connected'
-                  ? 'Backend API Connected — Enhanced Resume Processing Active'
-                  : 'Backend Offline — Using Client-Side Processing (Limited Accuracy)'}
+                  ? 'Backend API Connected — Full Resume Processing Active'
+                  : 'Backend Offline — PDF/DOCX Processing Unavailable'}
               </span>
             </div>
             {apiStatus === 'connected' && (
@@ -253,7 +247,8 @@ const AIRecommendationForm = () => {
             )}
             {apiStatus === 'disconnected' && (
               <p className="text-sm mt-2">
-                Falling back to browser-based processing. Some PDFs may not parse correctly.
+                <strong>PDF/DOCX parsing unavailable without backend to preserve correctness.</strong>
+                <br />Start backend: <code className="bg-yellow-100 px-1 rounded">cd backend && python run.py</code>
               </p>
             )}
           </div>
