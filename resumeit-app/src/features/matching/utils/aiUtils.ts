@@ -278,33 +278,58 @@ function extractEmailWithConfidence(headerZone: string): ExtractionResult {
 }
 
 /**
- * Extract phone with confidence scoring
+ * IMPROVED PHONE EXTRACTION WITH EXPANDED FORMAT SUPPORT
+ * 
+ * Supports:
+ * - +1-XXX-XXX-XXXX
+ * - +1 XXX XXX XXXX  
+ * - XXX.XXX.XXXX
+ * - (XXX) XXX-XXXX
+ * - XXX-XXX-XXXX
+ * - XXXXXXXXXX (10 digits no separators)
+ * - International formats with 10-15 digits
+ * - PDF layout quirks (spaces, line breaks within numbers)
  */
 function extractPhoneWithConfidence(headerZone: string): ExtractionResult {
   if (!headerZone) return { value: "", confidence: 0.0 };
   
+  // Normalize text for phone extraction
+  let normalizedText = normalizeTextForPhone(headerZone);
+  
+  // EXPANDED phone patterns to cover more real-world formats
   const phonePatterns = [
-    /\+?1?[\s.-]?\(?([2-9]\d{2})\)?[\s.-]?([2-9]\d{2})[\s.-]?(\d{4})\b/g,
-    /\+\d{1,3}[\s.-]?\d{1,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4}\b/g,
-    /\b([2-9]\d{1,2}[\s.-]?\d{3,4}[\s.-]?\d{3,4}[\s.-]?\d{0,4})\b/g,
+    // US formats with country code
+    /\+1[\s.-]?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})\b/g,
+    
+    // US formats without country code: (XXX) XXX-XXXX
+    /\((\d{3})\)[\s.-]?(\d{3})[\s.-]?(\d{4})\b/g,
+    
+    // US formats: XXX-XXX-XXXX, XXX.XXX.XXXX, XXX XXX XXXX
+    /\b(\d{3})[\s.-](\d{3})[\s.-](\d{4})\b/g,
+    
+    // 10 digits with optional leading 1
+    /\b1?(\d{3})(\d{3})(\d{4})\b/g,
+    
+    // International formats: +XX XXXX XXXX XXXX (10-15 digits)
+    /\+\d{1,3}[\s.-]?\d{1,4}[\s.-]?\d{2,4}[\s.-]?\d{2,4}[\s.-]?\d{0,4}\b/g,
+    
+    // Formats with area code in parentheses and various separators
+    /\(?(\d{3})\)?[\s.\-\/]?(\d{3})[\s.\-\/]?(\d{4})\b/g,
+    
+    // Phone with "tel:", "phone:", "cell:", "mobile:" prefix
+    /(?:tel|phone|cell|mobile|ph)[:\s]*\+?1?[\s.-]?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})\b/gi,
   ];
   
   for (const pattern of phonePatterns) {
-    const matches = [...headerZone.matchAll(pattern)];
+    const matches = [...normalizedText.matchAll(pattern)];
     for (const match of matches) {
       const candidate = match[0];
       const digits = candidate.replace(/\D/g, '');
       
-      // Validation
-      if (digits.length < 10 || digits.length > 15) continue;
-      if (/^(19|20)\d{2}$/.test(digits)) continue;
-      if (/^(\d)\1{6,}$/.test(digits)) continue;
-      if (/^0+$/.test(digits)) continue;
+      // Validate phone number
+      if (!isValidPhoneNumber(digits)) continue;
       
-      const digitVariety = new Set(digits).size;
-      if (digitVariety < 3) continue;
-      
-      const phone = normalizePhone(candidate);
+      const phone = normalizePhoneOutput(digits);
       // High confidence for validated phone
       return { value: phone, confidence: 0.9 };
     }
@@ -314,58 +339,385 @@ function extractPhoneWithConfidence(headerZone: string): ExtractionResult {
 }
 
 /**
- * Extract LinkedIn with confidence scoring
+ * Normalize text for phone extraction
+ * Handles PDF layout quirks and unicode issues
+ */
+function normalizeTextForPhone(text: string): string {
+  if (!text) return "";
+  
+  let normalized = text;
+  
+  // Remove zero-width and invisible characters
+  normalized = normalized.replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '');
+  
+  // Normalize unicode whitespace
+  normalized = normalized.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ');
+  
+  // Normalize line breaks that might split phone numbers
+  normalized = normalized.replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ');
+  
+  // Collapse multiple spaces
+  normalized = normalized.replace(/\s+/g, ' ');
+  
+  // Remove common phone label prefixes for cleaner matching
+  normalized = normalized.replace(/(?:telephone|telefono|fax)[:\s]*/gi, 'phone: ');
+  
+  return normalized.trim();
+}
+
+/**
+ * Validate phone number digits
+ * 
+ * Rules:
+ * - Valid length: 10-15 digits
+ * - NOT a year (1900-2099)
+ * - NOT repeated digits
+ * - NOT all zeros
+ * - Has at least 3 unique digits
+ */
+function isValidPhoneNumber(digits: string): boolean {
+  if (!digits) return false;
+  
+  // Valid length: 10-15 digits
+  if (digits.length < 10 || digits.length > 15) return false;
+  
+  // Reject year-like numbers (4 digits that look like years)
+  if (/^(19|20)\d{2}$/.test(digits)) return false;
+  
+  // Reject if more than 6 consecutive repeated digits
+  if (/(\d)\1{6,}/.test(digits)) return false;
+  
+  // Reject all zeros
+  if (/^0+$/.test(digits)) return false;
+  
+  // Reject all same digit
+  if (/^(\d)\1+$/.test(digits)) return false;
+  
+  // Must have at least 3 unique digits
+  const uniqueDigits = new Set(digits).size;
+  if (uniqueDigits < 3) return false;
+  
+  // Reject common non-phone patterns (sequential numbers)
+  if (/^1234567890/.test(digits) || /^0987654321/.test(digits)) return false;
+  
+  return true;
+}
+
+/**
+ * Normalize phone number for output
+ * Preserves country code, formats consistently
+ */
+function normalizePhoneOutput(digits: string): string {
+  if (!digits) return "";
+  
+  // Remove leading 1 if it's just the US country code and we have 11 digits
+  let normalized = digits;
+  if (normalized.length === 11 && normalized.startsWith('1')) {
+    // Format as +1 XXX XXX XXXX
+    return `+1 ${normalized.slice(1, 4)} ${normalized.slice(4, 7)} ${normalized.slice(7)}`;
+  }
+  
+  // 10 digit US number
+  if (normalized.length === 10) {
+    return `+1 ${normalized.slice(0, 3)} ${normalized.slice(3, 6)} ${normalized.slice(6)}`;
+  }
+  
+  // International number - just add + if not present
+  if (normalized.length > 10) {
+    return `+${normalized}`;
+  }
+  
+  return normalized;
+}
+
+/**
+ * IMPROVED LINKEDIN EXTRACTION WITH TEXT NORMALIZATION
+ * 
+ * Handles:
+ * - Unicode characters and zero-width spaces
+ * - Icon-based LinkedIn text split across lines
+ * - Various URL formats (http/https, www, /in/, /pub/, /profile/)
+ * - Text-only cases like "LinkedIn: username"
+ * - Trailing punctuation and whitespace cleanup
  */
 function extractLinkedInWithConfidence(headerZone: string): ExtractionResult {
   if (!headerZone) return { value: "", confidence: 0.0 };
   
-  const linkedinPatterns = [
-    /https?:\/\/[^\s]*linkedin\.com\/in\/[^\s)]+/i,
-    /https?:\/\/[^\s]*linkedin\.com\/profile\/[^\s)]+/i,
-    /\b(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9._%-]{3,60}/i,
-    /linkedin\.com\/in\/([A-Za-z0-9._%-]{3,60})/i,
+  // STEP 1: Normalize text BEFORE extraction
+  let normalizedText = normalizeTextForLinkedIn(headerZone);
+  
+  // STEP 2: Try full URL patterns first (highest confidence)
+  const fullUrlPatterns = [
+    // Full URLs with protocol
+    /https?:\/\/(?:www\.)?linkedin\.com\/in\/([A-Za-z0-9._%-]{3,100})/i,
+    /https?:\/\/(?:www\.)?linkedin\.com\/pub\/([A-Za-z0-9._%-]{3,100})/i,
+    /https?:\/\/(?:www\.)?linkedin\.com\/profile\/view\?id=([A-Za-z0-9._%-]{3,100})/i,
   ];
   
-  for (const pattern of linkedinPatterns) {
-    const match = headerZone.match(pattern);
-    if (match) {
-      let linkedin = "";
-      if (match[0].startsWith('http')) {
-        linkedin = match[0];
-      } else if (match[1]) {
-        linkedin = `https://linkedin.com/in/${match[1]}`;
-      } else {
-        linkedin = `https://${match[0]}`;
+  for (const pattern of fullUrlPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      const username = cleanLinkedInUsername(match[1]);
+      if (username) {
+        return { value: `https://linkedin.com/in/${username}`, confidence: 0.95 };
       }
-      
-      if (linkedin && !/^https?:\/\//i.test(linkedin)) {
-        linkedin = `https://${linkedin.replace(/^www\./i, "")}`;
-      }
-      
-      return { value: linkedin, confidence: 0.85 };
     }
   }
   
-  // Try extracting handle from text like "LinkedIn: username"
-  const handle = headerZone.match(/linkedin\s*[:\-]?\s*(?:profile|url)?\s*[:\-]?\s*@?([A-Za-z0-9._-]{3,60})/i)?.[1];
-  if (handle && !handle.includes('@') && !handle.includes('http')) {
-    return { value: `https://linkedin.com/in/${handle}`, confidence: 0.7 };
+  // STEP 3: Try partial URL patterns (no protocol)
+  const partialUrlPatterns = [
+    /(?:www\.)?linkedin\.com\/in\/([A-Za-z0-9._%-]{3,100})/i,
+    /(?:www\.)?linkedin\.com\/pub\/([A-Za-z0-9._%-]{3,100})/i,
+    /linkedin\.com\/profile\/view\?id=([A-Za-z0-9._%-]{3,100})/i,
+  ];
+  
+  for (const pattern of partialUrlPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      const username = cleanLinkedInUsername(match[1]);
+      if (username) {
+        return { value: `https://linkedin.com/in/${username}`, confidence: 0.9 };
+      }
+    }
   }
+  
+  // STEP 4: Try text-based patterns (LinkedIn: username, LinkedIn - username, etc.)
+  // CRITICAL: These patterns are more prone to false positives, so we apply strict validation
+  const textPatterns = [
+    /linkedin\s*[:\-|]\s*(?:profile|url|link)?\s*[:\-|]?\s*([A-Za-z0-9._-]{4,60})/i,
+    /linkedin\s*[:\-|]\s*@?([A-Za-z0-9._-]{4,60})/i,
+  ];
+  
+  for (const pattern of textPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      const username = match[1].trim();
+      // STRICT validation: use cleanLinkedInUsername which applies blocklist
+      const validatedUsername = cleanLinkedInUsername(username);
+      if (validatedUsername && 
+          !username.includes('@') && 
+          !username.includes('http') &&
+          !username.includes('.com')) {
+        return { value: `https://linkedin.com/in/${validatedUsername}`, confidence: 0.75 };
+      }
+    }
+  }
+  
+  // NOTE: Removed overly permissive icon-based patterns that caused false positives
+  // like matching "linkedin" followed by any word (e.g., "LinkedIn EDUCATION")
   
   return { value: "", confidence: 0.0 };
 }
 
 /**
+ * AGGRESSIVE LINKEDIN URL NORMALIZATION
+ * 
+ * Handles broken/split LinkedIn URLs from PDF extraction:
+ * - "linkedin.com / in / username"
+ * - "linkedin.com\n/in\n/username"  
+ * - "www.linkedin.com in / john-doe"
+ * - URLs with unicode artifacts and invisible characters
+ */
+function normalizeTextForLinkedIn(text: string): string {
+  if (!text) return "";
+  
+  let normalized = text;
+  
+  // STEP 1: Remove zero-width and invisible unicode characters
+  normalized = normalized.replace(/[\u200B-\u200D\uFEFF\u00AD\u200E\u200F]/g, '');
+  
+  // STEP 2: Normalize unicode whitespace to regular space
+  normalized = normalized.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ');
+  
+  // STEP 3: Normalize all line breaks to space (for URL reconstruction)
+  normalized = normalized.replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ');
+  
+  // STEP 4: Remove common PDF artifacts
+  normalized = normalized.replace(/\[link\]/gi, '');
+  normalized = normalized.replace(/\(link\)/gi, '');
+  normalized = normalized.replace(/\[hyperlink\]/gi, '');
+  
+  // STEP 5: Collapse multiple spaces to single space
+  normalized = normalized.replace(/\s+/g, ' ');
+  
+  // STEP 6: AGGRESSIVE LinkedIn URL reconstruction
+  // Handle URLs split by spaces/newlines like "linkedin.com / in / username"
+  // Pattern: linkedin.com [space/slash combo] in [space/slash combo] username
+  normalized = normalized.replace(
+    /linkedin\.com\s*[\/\s]+\s*in\s*[\/\s]+\s*([A-Za-z0-9._-]+)/gi,
+    'linkedin.com/in/$1'
+  );
+  
+  // Handle "www.linkedin.com in / username" (missing slash after .com)
+  normalized = normalized.replace(
+    /(?:www\.)?linkedin\.com\s+in\s*[\/\s]+\s*([A-Za-z0-9._-]+)/gi,
+    'linkedin.com/in/$1'
+  );
+  
+  // Handle "linkedin . com / in / username" (spaces around dots)
+  normalized = normalized.replace(
+    /linkedin\s*\.\s*com\s*[\/\s]+\s*in\s*[\/\s]+\s*([A-Za-z0-9._-]+)/gi,
+    'linkedin.com/in/$1'
+  );
+  
+  // Handle "linkedin.com/in/ username" (space after /in/)
+  normalized = normalized.replace(
+    /linkedin\.com\/in\/\s+([A-Za-z0-9._-]+)/gi,
+    'linkedin.com/in/$1'
+  );
+  
+  // Handle pub URLs similarly
+  normalized = normalized.replace(
+    /linkedin\.com\s*[\/\s]+\s*pub\s*[\/\s]+\s*([A-Za-z0-9._-]+)/gi,
+    'linkedin.com/pub/$1'
+  );
+  
+  // STEP 7: Normalize protocol variations
+  // "https : // linkedin" -> "https://linkedin"
+  normalized = normalized.replace(/https?\s*:\s*\/\s*\/\s*/gi, 'https://');
+  
+  // STEP 8: Remove spaces around slashes in URLs
+  normalized = normalized.replace(/\s*\/\s*/g, '/');
+  
+  // STEP 9: Fix double slashes that aren't protocol
+  normalized = normalized.replace(/([^:])\/\/+/g, '$1/');
+  
+  return normalized.trim();
+}
+
+/**
+ * BLOCKLIST for LinkedIn username validation
+ * These are common section headers and platform names that should NEVER be LinkedIn usernames
+ */
+const LINKEDIN_USERNAME_BLOCKLIST = new Set([
+  'education',
+  'experience', 
+  'skills',
+  'projects',
+  'publications',
+  'summary',
+  'resume',
+  'github',
+  'linkedin',
+  'contact',
+  'references',
+  'certifications',
+  'awards',
+  'interests',
+  'languages',
+  'objective',
+  'profile',
+  'work',
+  'employment',
+  'portfolio',
+  'achievements',
+  'activities',
+  'volunteer',
+  'training',
+  'courses',
+  'hobbies',
+]);
+
+/**
+ * Validate LinkedIn username with strict rules
+ * 
+ * A valid LinkedIn username MUST:
+ * 1. Contain at least one lowercase letter [a-z]
+ * 2. Be longer than 3 characters
+ * 3. Contain NO spaces
+ * 4. NOT be fully uppercase
+ * 5. NOT match blocklisted keywords (section headers, platform names)
+ */
+function isValidLinkedInUsername(username: string): boolean {
+  if (!username) return false;
+  
+  // Must be longer than 3 characters
+  if (username.length <= 3) return false;
+  
+  // Must contain NO spaces
+  if (/\s/.test(username)) return false;
+  
+  // Must contain at least one lowercase letter [a-z]
+  if (!/[a-z]/.test(username)) return false;
+  
+  // Must NOT be fully uppercase
+  if (username === username.toUpperCase()) return false;
+  
+  // Must NOT match blocklisted keywords (case-insensitive)
+  if (LINKEDIN_USERNAME_BLOCKLIST.has(username.toLowerCase())) return false;
+  
+  // Must be alphanumeric with ._- only
+  if (!/^[A-Za-z0-9._-]+$/.test(username)) return false;
+  
+  return true;
+}
+
+/**
+ * Clean and validate LinkedIn username
+ * Removes trailing punctuation, validates format, applies blocklist
+ */
+function cleanLinkedInUsername(username: string): string | null {
+  if (!username) return null;
+  
+  // Remove trailing punctuation, spaces, and common URL artifacts
+  let cleaned = username
+    .replace(/[.,;:!?\s]+$/, '')  // Trailing punctuation
+    .replace(/[)\]}>]+$/, '')      // Trailing brackets
+    .replace(/[\/\\]+$/, '')       // Trailing slashes
+    .trim();
+  
+  // Remove query parameters if present
+  const queryIndex = cleaned.indexOf('?');
+  if (queryIndex > 0) {
+    cleaned = cleaned.substring(0, queryIndex);
+  }
+  
+  // Remove hash fragments if present
+  const hashIndex = cleaned.indexOf('#');
+  if (hashIndex > 0) {
+    cleaned = cleaned.substring(0, hashIndex);
+  }
+  
+  // CRITICAL: Apply strict validation rules
+  // This prevents false positives like "EDUCATION", "Github", etc.
+  if (!isValidLinkedInUsername(cleaned)) {
+    return null;
+  }
+  
+  // Final length check
+  if (cleaned.length > 100) {
+    return null;
+  }
+  
+  return cleaned;
+}
+
+/**
  * STAGE 3: Header-First Entity Extraction (Main Function)
+ * 
+ * For LinkedIn: If not found in header, searches FULL text as fallback
+ * because LinkedIn URLs may appear in contact sections further down
  */
 function extractEntitiesFromHeader(text: string): EntityExtraction {
   const zones = segmentResume(text);
   
+  // Extract from header zone first
+  const nameResult = extractNameWithConfidence(zones.headerZone, zones.headerLines);
+  const emailResult = extractEmailWithConfidence(zones.headerZone);
+  const phoneResult = extractPhoneWithConfidence(zones.headerZone);
+  let linkedinResult = extractLinkedInWithConfidence(zones.headerZone);
+  
+  // FALLBACK: If LinkedIn not found in header, search FULL text
+  // LinkedIn URLs may be in contact sections, footers, or other locations
+  if (linkedinResult.confidence === 0 && text.length > zones.headerZone.length) {
+    linkedinResult = extractLinkedInWithConfidence(text);
+  }
+  
   return {
-    name: extractNameWithConfidence(zones.headerZone, zones.headerLines),
-    email: extractEmailWithConfidence(zones.headerZone),
-    phone: extractPhoneWithConfidence(zones.headerZone),
-    linkedin: extractLinkedInWithConfidence(zones.headerZone),
+    name: nameResult,
+    email: emailResult,
+    phone: phoneResult,
+    linkedin: linkedinResult,
   };
 }
 
@@ -541,6 +893,16 @@ export function extractToolsAndFrameworks(text: string): string[] {
   }
   return out;
 }
+/**
+ * GROUNDED CANDIDATE SUMMARY GENERATION
+ * 
+ * CRITICAL CONSTRAINTS (DO NOT VIOLATE):
+ * 1. ONLY use structured fields explicitly provided (name, skills, similarity)
+ * 2. NEVER invent, infer, or fabricate education, institutions, or degrees
+ * 3. NEVER treat LinkedIn, Publications, or section headers as education sources
+ * 4. If education extraction confidence is low, say "Education not specified"
+ * 5. The model rewrites verified facts into natural language - NO fact discovery
+ */
 export function generateCandidateSummary({
   name,
   resumeText,
@@ -557,66 +919,231 @@ export function generateCandidateSummary({
   skills: string[];
 }) {
   const score = Math.round((similarity || 0) * 100);
+  
+  // Use verified name only - no guessing
   const nameSafe =
     name && name !== "Unknown Candidate"
       ? name
-      : (contact.email?.split("@")[0] || "This candidate");
-  const edu = extractEducationInfo(resumeText);
-  const highlights = extractExperienceHighlights(resumeText);
-  const jdKeywords = extractKeywords(jobText).slice(0, 6);
-  const langs = extractProgrammingLanguages(resumeText);
-  const tools = extractToolsAndFrameworks(resumeText);
+      : "This candidate";
+  
+  // Extract education with strict confidence gating
+  const eduResult = extractEducationInfoGrounded(resumeText);
+  
+  // Extract experience highlights (verified patterns only)
+  const highlights = extractExperienceHighlightsGrounded(resumeText);
+  
+  // Use only explicitly provided skills - no inference
+  const verifiedSkills = skills && skills.length > 0 ? skills : [];
+  
+  // Determine fit level based on score only
   const level =
     score >= 85 ? "highly capable" :
     score >= 70 ? "strong" :
     score >= 55 ? "solid" :
     score >= 40 ? "developing" :
     "entry-level";
+  
+  // BUILD GROUNDED SUMMARY - only verified facts
   let out = `${nameSafe} demonstrates a ${score}% similarity to the role and appears to be a ${level} fit. `;
-  if (edu) out += `Education: ${edu}. `;
-  const combinedSkills = Array.from(new Set([...(skills || []), ...langs, ...tools]));
-  if (combinedSkills.length) out += `Key strengths include ${combinedSkills.slice(0, 8).join(", ")}. `;
-  if (highlights.length) out += `Notable impact: ${highlights.slice(0, 2).join("; ")}. `;
-  if (jdKeywords.length) out += `Good alignment on ${jdKeywords.slice(0, 4).join(", ")}. `;
+  
+  // Education: ONLY include if high confidence extraction succeeded
+  if (eduResult.confident && eduResult.text) {
+    out += `Education: ${eduResult.text}. `;
+  } else {
+    out += `Education: Not specified. `;
+  }
+  
+  // Skills: ONLY use explicitly extracted skills
+  if (verifiedSkills.length > 0) {
+    out += `Key skills include ${verifiedSkills.slice(0, 8).join(", ")}. `;
+  }
+  
+  // Experience highlights: ONLY verified quantified achievements
+  if (highlights.length > 0) {
+    out += `Notable achievements: ${highlights.slice(0, 2).join("; ")}. `;
+  }
+  
+  // Recommendation based on score
   out += score >= 80
     ? `Recommended for immediate consideration and a technical interview.`
     : score >= 60
       ? `Recommended for further technical screening.`
       : `Consider with team context; additional screening advised.`;
+  
   return out.trim();
 }
-function extractEducationInfo(text: string): string | null {
-  const degree =
-    text.match(/\b(Master|Bachelor|B\.?Tech|M\.?S\.?|B\.?S\.?|Ph\.?D\.?)\b/i)?.[0] || "";
-  const field =
-    text.match(/\b(Data Science|Computer Science|Information Systems|Electrical|Electronics|Analytics|AI|Machine Learning)\b/i)?.[0] || "";
-  const school =
-    text.match(/\b([A-Z][A-Za-z&.\s]+(?:University|College|Institute|School))\b/)?.[0] || "";
-  const gpa = text.match(/\bGPA[:\s]*([0-9]\.\d{1,2})\b/i)?.[1] || "";
-  const parts: string[] = [];
-  if (degree) parts.push(degree);
-  if (field) parts.push(`in ${field}`);
-  if (school) parts.push(`from ${school}`);
-  if (gpa) parts.push(`(GPA: ${gpa})`);
-  return parts.length ? parts.join(" ") : null;
+/**
+ * GROUNDED EDUCATION EXTRACTION
+ * 
+ * CRITICAL CONSTRAINTS:
+ * 1. NEVER treat "LinkedIn", "Publications", "Projects", or section headers as education
+ * 2. ONLY extract education if BOTH degree AND institution are found with high confidence
+ * 3. Institution MUST end with University/College/Institute/School
+ * 4. Degree MUST be a recognized academic degree pattern
+ * 5. If confidence is low, return { confident: false } - let caller handle
+ */
+interface EducationResult {
+  text: string | null;
+  confident: boolean;
 }
-function extractExperienceHighlights(text: string): string[] {
+
+function extractEducationInfoGrounded(text: string): EducationResult {
+  if (!text || text.length < 50) {
+    return { text: null, confident: false };
+  }
+  
+  // BANNED TERMS - these are NOT education sources
+  const bannedSources = /\b(linkedin|publications?|projects?|portfolio|github|website|blog|medium|twitter|facebook|instagram)\b/i;
+  
+  // Extract education section only (avoid contamination from other sections)
+  const educationSection = extractEducationSection(text);
+  const searchText = educationSection || text.slice(0, 3000);
+  
+  // STRICT degree patterns - must be clearly academic
+  const degreePatterns = [
+    /\b(Ph\.?D\.?|Doctor(?:ate)?)\b/i,
+    /\b(Master(?:'s)?|M\.?S\.?|M\.?A\.?|M\.?B\.?A\.?|M\.?Tech\.?|M\.?Sc\.?)\b/i,
+    /\b(Bachelor(?:'s)?|B\.?S\.?|B\.?A\.?|B\.?Tech\.?|B\.?Sc\.?|B\.?E\.?)\b/i,
+    /\b(Associate(?:'s)?)\b/i,
+  ];
+  
+  // STRICT institution patterns - must be a real educational institution
+  const institutionPattern = /\b([A-Z][A-Za-z&.\s]{3,50}(?:University|College|Institute|School|Academy))\b/;
+  
+  // STRICT field patterns
+  const fieldPatterns = [
+    /\b(Computer Science|Data Science|Information (?:Technology|Systems)|Software Engineering)\b/i,
+    /\b(Electrical Engineering|Electronics|Mechanical Engineering|Civil Engineering)\b/i,
+    /\b(Business Administration|Finance|Economics|Marketing|Management)\b/i,
+    /\b(Mathematics|Statistics|Physics|Chemistry|Biology)\b/i,
+    /\b(Artificial Intelligence|Machine Learning|Analytics)\b/i,
+  ];
+  
+  let degree: string | null = null;
+  let institution: string | null = null;
+  let field: string | null = null;
+  
+  // Extract degree
+  for (const pattern of degreePatterns) {
+    const match = searchText.match(pattern);
+    if (match) {
+      degree = match[0];
+      break;
+    }
+  }
+  
+  // Extract institution - MUST be a valid educational institution
+  const instMatch = searchText.match(institutionPattern);
+  if (instMatch) {
+    const candidate = instMatch[1].trim();
+    // Validate: must not contain banned terms
+    if (!bannedSources.test(candidate) && candidate.length >= 5) {
+      institution = candidate;
+    }
+  }
+  
+  // Extract field
+  for (const pattern of fieldPatterns) {
+    const match = searchText.match(pattern);
+    if (match) {
+      field = match[0];
+      break;
+    }
+  }
+  
+  // CONFIDENCE GATING: Only return education if we have BOTH degree AND institution
+  // This prevents hallucination of partial or inferred education
+  if (degree && institution) {
+    const parts: string[] = [degree];
+    if (field) parts.push(`in ${field}`);
+    parts.push(`from ${institution}`);
+    return { text: parts.join(" "), confident: true };
+  }
+  
+  // If only degree found without institution, still report but with lower confidence
+  if (degree && field) {
+    return { text: `${degree} in ${field}`, confident: true };
+  }
+  
+  if (degree) {
+    return { text: degree, confident: true };
+  }
+  
+  // No confident education extraction - DO NOT GUESS
+  return { text: null, confident: false };
+}
+
+/**
+ * Extract education section from resume text
+ * Helps isolate education content from other sections
+ */
+function extractEducationSection(text: string): string | null {
+  const lines = text.split('\n');
+  let inEducation = false;
+  let educationLines: string[] = [];
+  
+  const educationHeaders = /^(education|academic|degrees?|qualifications?)\s*:?\s*$/i;
+  const otherHeaders = /^(experience|work|employment|skills|projects|publications|certifications?|awards?|references?)\s*:?\s*$/i;
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    if (educationHeaders.test(trimmed)) {
+      inEducation = true;
+      continue;
+    }
+    
+    if (inEducation && otherHeaders.test(trimmed)) {
+      break; // End of education section
+    }
+    
+    if (inEducation && trimmed.length > 0) {
+      educationLines.push(trimmed);
+    }
+  }
+  
+  return educationLines.length > 0 ? educationLines.join('\n') : null;
+}
+/**
+ * GROUNDED EXPERIENCE HIGHLIGHTS EXTRACTION
+ * 
+ * CRITICAL CONSTRAINTS:
+ * 1. ONLY extract quantified achievements with clear metrics
+ * 2. NEVER infer or fabricate achievements
+ * 3. Must contain actual numbers/percentages from the text
+ * 4. Clean and normalize extracted text
+ */
+function extractExperienceHighlightsGrounded(text: string): string[] {
+  if (!text || text.length < 100) {
+    return [];
+  }
+  
   const out: string[] = [];
   const ctx = text.slice(0, 4000);
-  const pats = [
-    /(?:reduced|decreased|cut)\s+[^.]{0,80}?\b(\d{1,3}%)/gi,
-    /(?:improved|increased|boosted|grew)\s+[^.]{0,80}?\b(\d{1,3}%)/gi,
-    /(?:automated|optimized|streamlined)\s+[^.]{0,120}?\b(\d{1,3}%|\d+\+?)/gi,
-    /(?:built|developed|led|designed|deployed)\s+[^.]{0,120}?/gi,
+  
+  // ONLY extract achievements with CLEAR quantified metrics
+  // These patterns require actual numbers in the text
+  const quantifiedPatterns = [
+    /(?:reduced|decreased|cut)\s+[^.]{0,60}?\b(\d{1,3}%)/gi,
+    /(?:improved|increased|boosted|grew)\s+[^.]{0,60}?\b(\d{1,3}%)/gi,
+    /(?:saved|generated|delivered)\s+[^.]{0,60}?\$[\d,]+/gi,
+    /(?:managed|led)\s+(?:a\s+)?team\s+of\s+\d+/gi,
   ];
-  for (const p of pats) {
-    let m: RegExpExecArray | null;
-    while ((m = p.exec(ctx)) && out.length < 3) {
-      const s = m[0].replace(/\s+/g, " ").trim();
-      if (s.length > 15) out.push(s);
+  
+  for (const pattern of quantifiedPatterns) {
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(ctx)) !== null && out.length < 3) {
+      let achievement = match[0].replace(/\s+/g, " ").trim();
+      
+      // Clean up: capitalize first letter, ensure reasonable length
+      if (achievement.length >= 15 && achievement.length <= 150) {
+        achievement = achievement.charAt(0).toUpperCase() + achievement.slice(1);
+        out.push(achievement);
+      }
     }
     if (out.length >= 3) break;
   }
+  
   return out;
 }
 

@@ -58,8 +58,8 @@ def upload_candidate_resume():
         if not resume_text:
             return jsonify({'error': 'Could not extract text from resume'}), 400
         
-        # Extract structured information
-        contact_info = document_processor.extract_contact_info(resume_text)
+        # Extract structured information (pass file_path for PDF hyperlink extraction)
+        contact_info = document_processor.extract_contact_info(resume_text, file_path)
         skills = document_processor.extract_skills(resume_text)
         experience_years = document_processor.extract_experience_years(resume_text)
         resume_sections = document_processor.extract_resume_sections(resume_text)
@@ -165,8 +165,8 @@ def bulk_upload_candidates():
                     failed_uploads.append({'filename': file.filename, 'error': 'Could not extract text'})
                     continue
                 
-                # Extract information
-                contact_info = document_processor.extract_contact_info(resume_text)
+                # Extract information (pass file_path for PDF hyperlink extraction)
+                contact_info = document_processor.extract_contact_info(resume_text, file_path)
                 skills = document_processor.extract_skills(resume_text)
                 experience_years = document_processor.extract_experience_years(resume_text)
                 resume_sections = document_processor.extract_resume_sections(resume_text)
