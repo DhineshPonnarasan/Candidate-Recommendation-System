@@ -42,7 +42,8 @@ class APIService {
         return envUrl;
       }
     }
-    return 'http://localhost:8080';
+    // Production-ready default: Backend always runs on port 8081
+    return 'http://localhost:8081';
   }
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;

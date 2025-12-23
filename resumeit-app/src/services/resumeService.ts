@@ -135,6 +135,7 @@ class ResumeService {
   async testConnection(): Promise<boolean> {
     const healthUrl = `${this.baseURL}/api/health`;
     console.log(`[ResumeService] Testing backend connection at: ${healthUrl}`);
+    console.log(`[ResumeService] Connected to backend at ${this.baseURL}`);
     
     try {
       const controller = new AbortController();
@@ -153,6 +154,7 @@ class ResumeService {
       
       if (!response.ok) {
         console.warn(`[ResumeService] Health check failed with status: ${response.status}`);
+        console.warn(`[ResumeService] Backend at ${this.baseURL} is not available`);
         return false;
       }
       
@@ -160,13 +162,19 @@ class ResumeService {
       const data = await response.json().catch(() => null);
       console.log(`[ResumeService] Health check response:`, data);
       const isConnected = data !== null;
-      console.log(`[ResumeService] Backend connected: ${isConnected}`);
+      if (isConnected) {
+        console.log(`[ResumeService] ✓ Backend connected: ${this.baseURL}`);
+      } else {
+        console.warn(`[ResumeService] ✗ Backend at ${this.baseURL} returned invalid response`);
+      }
       return isConnected;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.warn('[ResumeService] Backend connection test timed out after 5 seconds');
+        console.warn(`[ResumeService] Backend connection test timed out after 5 seconds`);
+        console.warn(`[ResumeService] Backend at ${this.baseURL} is not responding`);
       } else {
-        console.warn('[ResumeService] Backend connection test failed:', error);
+        console.warn(`[ResumeService] Backend connection test failed:`, error);
+        console.warn(`[ResumeService] Backend at ${this.baseURL} is not available`);
       }
       return false;
     }
