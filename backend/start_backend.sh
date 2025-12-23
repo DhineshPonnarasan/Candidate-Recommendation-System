@@ -8,12 +8,15 @@ cd "$(dirname "$0")"
 source $(dirname "$0")/.venv/bin/activate
 
 # Start the backend server
-echo "📍 Starting server on port 3001..."
+# Local development: Set PORT=8081 for local development
+# Note: On Render, PORT is automatically provided by the platform
+echo "📍 Starting server on port 8081 (local development)..."
 export FLASK_APP=run.py
 export FLASK_ENV=development
+export PORT=8081
 
-# Try different approaches to start the server
-echo "Starting minimal backend (minimal_backend.py) with Flask..."
+# Start the main backend server
 PYTHON_BIN="$(dirname "$0")/.venv/bin/python"
 echo "Using Python binary at: $PYTHON_BIN"
-"$PYTHON_BIN" minimal_backend.py
+echo "Starting ResumeIT Backend on http://localhost:8081"
+"$PYTHON_BIN" run.py
