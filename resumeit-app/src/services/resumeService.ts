@@ -133,48 +133,42 @@ class ResumeService {
     }
   }
   async testConnection(): Promise<boolean> {
-    const healthUrl = `${this.baseURL}/api/health`;
-    console.log(`[ResumeService] Testing backend connection at: ${healthUrl}`);
-    console.log(`[ResumeService] Connected to backend at ${this.baseURL}`);
-    
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const response = await fetch(healthUrl, {
+
+      const healthUrl = `${this.baseURL}/api/health`;
+      console.log(`[ResumeService] Testing backend connection at: ${healthUrl}`);
+
+      let response = await fetch(healthUrl, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         signal: controller.signal,
       });
-      
-      clearTimeout(timeoutId);
-      console.log(`[ResumeService] Health check response status: ${response.status}`);
-      
+
+      // If /api/health is not available or not OK, fall back to root URL
       if (!response.ok) {
-        console.warn(`[ResumeService] Health check failed with status: ${response.status}`);
-        console.warn(`[ResumeService] Backend at ${this.baseURL} is not available`);
-        return false;
+        const fallbackUrl = `${this.baseURL}/`;
+        console.warn(`[ResumeService] Health endpoint returned ${response.status}. Falling back to root URL: ${fallbackUrl}`);
+        response = await fetch(fallbackUrl, {
+          method: 'GET',
+          signal: controller.signal,
+        });
       }
-      
-      // Try to parse JSON to ensure it's a valid response
-      const data = await response.json().catch(() => null);
-      console.log(`[ResumeService] Health check response:`, data);
-      const isConnected = data !== null;
-      if (isConnected) {
-        console.log(`[ResumeService] ✓ Backend connected: ${this.baseURL}`);
-      } else {
-        console.warn(`[ResumeService] ✗ Backend at ${this.baseURL} returned invalid response`);
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        console.log(`[ResumeService] Backend connected at ${this.baseURL}`);
+        return true;
       }
-      return isConnected;
+
+      console.warn(`[ResumeService] Backend unreachable at ${this.baseURL}. Last response status: ${response.status}`);
+      return false;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.warn(`[ResumeService] Backend connection test timed out after 5 seconds`);
-        console.warn(`[ResumeService] Backend at ${this.baseURL} is not responding`);
+        console.warn(`[ResumeService] Backend connection test timed out after 5 seconds for ${this.baseURL}`);
       } else {
-        console.warn(`[ResumeService] Backend connection test failed:`, error);
-        console.warn(`[ResumeService] Backend at ${this.baseURL} is not available`);
+        console.warn(`[ResumeService] Backend connection test failed for ${this.baseURL}:`, error);
       }
       return false;
     }
