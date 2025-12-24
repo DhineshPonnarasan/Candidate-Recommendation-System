@@ -15,10 +15,11 @@ class AppConfig:
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'app/static/uploads')
     ALLOWED_EXTENSIONS = set(os.getenv('ALLOWED_EXTENSIONS', 'pdf,doc,docx,txt').split(','))
     
-    # CORS Configuration - Production-ready: Only allow standard frontend port
+    # CORS Configuration - Production-ready: Allow Render frontend and localhost
     CORS_ORIGINS = [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
+        'https://candidate-recommendation-system-frontend.onrender.com',
     ]
     
     # CORS Headers Configuration

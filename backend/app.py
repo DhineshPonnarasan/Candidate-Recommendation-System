@@ -41,7 +41,14 @@ def create_app():
     def handle_preflight():
         if request.method == "OPTIONS":
             response = jsonify({})
-            response.headers.add("Access-Control-Allow-Origin", request.headers.get('Origin', '*'))
+            origin = request.headers.get('Origin')
+            # Validate origin against allowed list
+            allowed_origins = [o.strip() for o in AppConfig.CORS_ORIGINS]
+            if origin and origin.strip() in allowed_origins:
+                response.headers.add("Access-Control-Allow-Origin", origin)
+            elif origin and ('localhost' in origin or '127.0.0.1' in origin):
+                # Allow localhost for development
+                response.headers.add("Access-Control-Allow-Origin", origin)
             response.headers.add('Access-Control-Allow-Headers', ', '.join(AppConfig.CORS_ALLOW_HEADERS))
             response.headers.add('Access-Control-Allow-Methods', ', '.join(AppConfig.CORS_METHODS))
             response.headers.add('Access-Control-Allow-Credentials', 'true')
