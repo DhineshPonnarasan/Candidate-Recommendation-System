@@ -1,4 +1,4 @@
-# 🚀 ResumeIT - Advanced AI-Powered Candidate Recommendation System 
+# 🚀 ResumeIT - Advanced AI-Powered Candidate Recommendation System
 
 ## ✅ **ENTERPRISE-GRADE PLATFORM** 
 
