@@ -151,7 +151,7 @@ class User:
             
             for field in ['first_name', 'last_name', 'email']:
                 if field in kwargs:
-                    update_fields.append(f"{field} = %s")
+                    update_fields.append(f"{field} = ?")
                     values.append(kwargs[field])
             
             if not update_fields:
@@ -163,7 +163,7 @@ class User:
             query = f'''
                 UPDATE users 
                 SET {', '.join(update_fields)}
-                WHERE id = %s AND is_active = TRUE
+                WHERE id = ? AND is_active = 1
             '''
             
             cursor.execute(query, values)

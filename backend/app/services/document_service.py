@@ -1,40 +1,263 @@
 import os
 import re
-from typing import List, Dict, Optional  # PDF hyperlink extraction support added
+from typing import List, Dict, Optional, Any
 from pdfminer.high_level import extract_text
 from pdfminer.layout import LAParams, LTTextContainer
 from pdfminer.high_level import extract_pages
 from docx import Document
-import tempfile
-from io import StringIO
-
-# Import multiple PDF parsing libraries with fallbacks
-try:
-    import pdfplumber
-    PDFPLUMBER_AVAILABLE = True
-except ImportError:
-    PDFPLUMBER_AVAILABLE = False
-    print("Warning: pdfplumber not available. Install with: pip install pdfplumber")
 
 try:
-    import PyPDF2
-    PYPDF2_AVAILABLE = True
+    import spacy
 except ImportError:
-    PYPDF2_AVAILABLE = False
-    print("Warning: PyPDF2 not available. Install with: pip install PyPDF2")
-
-try:
-    import fitz  # PyMuPDF for hyperlink extraction
-    PYMUPDF_AVAILABLE = True
-except ImportError:
-    PYMUPDF_AVAILABLE = False
-    print("Warning: PyMuPDF not available. Install with: pip install PyMuPDF")
+    spacy = None
 
 class DocumentProcessor:
     """Service for processing and extracting text from various document formats"""
     
     def __init__(self):
-        self.supported_formats = ['pdf', 'doc', 'docx', 'txt']
+        self.supported_formats = ['pdf', 'docx', 'txt']
+        self._nlp = None
+        self._nlp_attempted = False
+
+    def _get_spacy_nlp(self):
+        """Load spaCy model lazily; degrade gracefully if unavailable."""
+        if self._nlp_attempted:
+            return self._nlp
+
+        self._nlp_attempted = True
+        if spacy is None:
+            return None
+
+        try:
+            self._nlp = spacy.load('en_core_web_sm')
+        except Exception as e:
+            print(f"spaCy model load failed (en_core_web_sm): {e}")
+            self._nlp = None
+
+        return self._nlp
+
+    def _normalize_input_for_details(self, text: str) -> str:
+        if not text:
+            return ""
+
+        # Normalize whitespace and line endings first.
+        text = text.replace('\x00', ' ').replace('\r\n', '\n').replace('\r', '\n')
+        lines = [re.sub(r'\s+', ' ', line).strip() for line in text.split('\n')]
+
+        # Remove common resume header/footer noise from OCR/PDF extraction.
+        noise_patterns = [
+            r'^page\s+\d+(\s+of\s+\d+)?$',
+            r'^generated\s+on\s+.+$',
+            r'^confidential$',
+            r'^curriculum\s+vitae$',
+            r'^resume$',
+            r'^[\W_]+$',
+        ]
+
+        filtered = []
+        for line in lines:
+            if not line:
+                continue
+            if any(re.match(pattern, line, flags=re.IGNORECASE) for pattern in noise_patterns):
+                continue
+            filtered.append(line)
+
+        return '\n'.join(filtered)
+
+    def _normalize_name(self, name: Optional[str]) -> Optional[str]:
+        if not name:
+            return None
+
+        name = re.sub(r'\.(pdf|doc|docx|txt)\b', '', name, flags=re.IGNORECASE)
+        name = re.sub(r'[^A-Za-z\s]', ' ', name)
+        name = re.sub(r'\s+', ' ', name).strip()
+        if not name:
+            return None
+
+        name = ' '.join(part.capitalize() for part in name.split())
+        return name
+
+    def is_valid_name(self, name: Optional[str]) -> bool:
+        if not name:
+            return False
+
+        lowered = name.lower().strip()
+        if 'resume' in lowered or 'cv' in lowered or '.pdf' in lowered or '_' in lowered:
+            return False
+
+        if re.search(r'\d', name):
+            return False
+
+        if not re.fullmatch(r'[A-Za-z\s]+', name):
+            return False
+
+        tokens = [token for token in name.split() if token]
+        if len(tokens) < 2 or len(tokens) > 5:
+            return False
+
+        banned_tokens = {
+            'resume', 'curriculum', 'vitae', 'email', 'phone', 'contact',
+            'contacts',
+            'linkedin', 'github', 'portfolio', 'summary', 'objective',
+            'experience', 'education', 'skills', 'projects', 'candidate'
+        }
+        if any(token.lower() in banned_tokens for token in tokens):
+            return False
+
+        return True
+
+    def _extract_name_ner(self, text: str) -> Optional[str]:
+        nlp = self._get_spacy_nlp()
+        if not nlp:
+            return None
+
+        top_block = '\n'.join(text.split('\n')[:16])
+        try:
+            doc = nlp(top_block)
+            for ent in doc.ents:
+                if ent.label_ == 'PERSON':
+                    candidate = self._normalize_name(ent.text)
+                    if self.is_valid_name(candidate):
+                        return candidate
+        except Exception as e:
+            print(f"spaCy PERSON extraction failed: {e}")
+
+        return None
+
+    def _extract_name_from_top_lines(self, text: str) -> Optional[str]:
+        # Rule-based name extraction from first 5 lines only.
+        lines = [line.strip() for line in text.split('\n')[:5] if line.strip()]
+        stop_markers = re.compile(
+            r'email|phone|mobile|linkedin|github|portfolio|@|http|www\.|experience|education|skills|contact|contacts',
+            flags=re.IGNORECASE,
+        )
+
+        for line in lines:
+            if stop_markers.search(line):
+                continue
+            if re.search(r'\d', line):
+                continue
+            candidate = self._normalize_name(line)
+            # Accept only 2 to 4 alphabetic words for primary rule-based extraction.
+            if candidate and re.fullmatch(r'[A-Za-z]+(?:\s+[A-Za-z]+){1,3}', candidate) and self.is_valid_name(candidate):
+                return candidate
+
+        return None
+
+    def _extract_email(self, text: str) -> Optional[str]:
+        match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}', text)
+        return match.group(0).strip() if match else None
+
+    def _extract_phone(self, text: str) -> Optional[str]:
+        pattern = r'(\+?\d{1,3}[-.\s]?)?\d{10}'
+        matches = list(re.finditer(pattern, text))
+
+        # Retry on compacted text to support formatted values like +1 (202) 555-0123.
+        if not matches:
+            compacted = re.sub(r'[()\s.-]+', '', text)
+            matches = list(re.finditer(pattern, compacted))
+
+        candidates = []
+
+        for match in matches:
+            raw = match.group(0)
+            normalized = re.sub(r'[^\d+]', '', raw)
+            digits = re.sub(r'\D', '', normalized)
+            if 10 <= len(digits) <= 13:
+                candidates.append((len(digits), normalized))
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        return candidates[0][1]
+
+    def _normalize_linkedin(self, value: str) -> str:
+        value = value.strip().rstrip(').,;')
+        if not re.match(r'^https?://', value, flags=re.IGNORECASE):
+            value = f'https://{value}'
+        value = value.replace('http://', 'https://')
+        value = value.replace('linkedin.com/', 'www.linkedin.com/')
+        return value
+
+    def _extract_linkedin(self, text: str) -> Optional[str]:
+        patterns = [
+            r'https?://(?:www\.)?linkedin\.com/in/[A-Za-z0-9._%-]+',
+            r'(?:www\.)?linkedin\.com/in/[A-Za-z0-9._%-]+',
+        ]
+
+        squashed = re.sub(r'\s+', '', text)
+        for source in (text, squashed):
+            for pattern in patterns:
+                match = re.search(pattern, source, flags=re.IGNORECASE)
+                if match:
+                    return self._normalize_linkedin(match.group(0))
+        return None
+
+    def _field_confidence(self, value: Optional[str], source: str) -> float:
+        if not value:
+            return 0.0
+        if source == 'ner':
+            return 0.95
+        if source == 'top_lines':
+            return 0.85
+        if source == 'regex':
+            return 0.9
+        if source == 'fallback':
+            return 0.65
+        return 0.5
+
+    def extract_candidate_details_with_confidence(self, text: str) -> Dict[str, Any]:
+        """Extract candidate details using NER + regex + heuristics with confidence scores."""
+        normalized_text = self._normalize_input_for_details(text)
+
+        email = self._extract_email(normalized_text)
+        phone = self._extract_phone(normalized_text)
+        linkedin = self._extract_linkedin(normalized_text)
+
+        name = None
+        name_source = 'not_found'
+
+        # Primary approach: rule-based extraction from first 5 lines.
+        top_line_name = self._extract_name_from_top_lines(normalized_text)
+        if top_line_name:
+            name = top_line_name
+            name_source = 'top_lines'
+        else:
+            # Optional fallback: NER PERSON extraction.
+            name_ner = self._extract_name_ner(normalized_text)
+            if name_ner:
+                name = name_ner
+                name_source = 'ner'
+
+        if not self.is_valid_name(name):
+            name = None
+            name_source = 'not_found'
+
+        details = {
+            'name': name or 'Unknown Candidate',
+            'email': email or 'Not Found',
+            'phone': phone or 'Not Found',
+            'linkedin': linkedin or 'Not Found',
+            'confidence': {
+                'name': self._field_confidence(name, name_source),
+                'email': self._field_confidence(email, 'regex'),
+                'phone': self._field_confidence(phone, 'regex'),
+                'linkedin': self._field_confidence(linkedin, 'regex'),
+            }
+        }
+
+        return details
+
+    def extract_candidate_details(self, text: str) -> Dict[str, str]:
+        """Required extraction API that returns normalized structured candidate fields."""
+        details = self.extract_candidate_details_with_confidence(text)
+        return {
+            'name': details.get('name', 'Unknown Candidate'),
+            'email': details.get('email', 'Not Found'),
+            'phone': details.get('phone', 'Not Found'),
+            'linkedin': details.get('linkedin', 'Not Found'),
+        }
     
     def extract_text(self, file_path: str, file_extension: str = None) -> str:
         """Extract text from document based on file extension"""
@@ -44,8 +267,10 @@ class DocumentProcessor:
             
             if file_extension == 'pdf':
                 return self._extract_from_pdf(file_path)
-            elif file_extension in ['doc', 'docx']:
+            elif file_extension == 'docx':
                 return self._extract_from_docx(file_path)
+            elif file_extension == 'doc':
+                return self._extract_from_doc(file_path)
             elif file_extension == 'txt':
                 return self._extract_from_txt(file_path)
             else:
@@ -54,6 +279,11 @@ class DocumentProcessor:
         except Exception as e:
             print(f"Error extracting text from {file_path}: {e}")
             return ""
+
+    def _extract_from_doc(self, file_path: str) -> str:
+        """Legacy .doc extraction is intentionally unsupported for reliability."""
+        print(f"Unsupported format for parser: {file_path}")
+        return ""
     
     def _extract_from_pdf(self, file_path: str) -> str:
         """
@@ -420,9 +650,14 @@ class DocumentProcessor:
     def _extract_from_txt(self, file_path: str) -> str:
         """Extract text from TXT file"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                text = file.read()
-            return self._clean_text(text)
+            for encoding in ('utf-8', 'latin-1', 'cp1252'):
+                try:
+                    with open(file_path, 'r', encoding=encoding) as file:
+                        text = file.read()
+                    return self._clean_text(text)
+                except UnicodeDecodeError:
+                    continue
+            return ""
         except Exception as e:
             print(f"Error extracting from TXT: {e}")
             return ""
@@ -434,37 +669,22 @@ class DocumentProcessor:
         """
         if not text:
             return ""
-        
-        # Normalize unicode whitespace characters
-        text = text.replace('\u00A0', ' ')  # Non-breaking space
-        text = text.replace('\u2000', ' ')  # En quad
-        text = text.replace('\u2001', ' ')  # Em quad
-        text = text.replace('\u2002', ' ')  # En space
-        text = text.replace('\u2003', ' ')  # Em space
-        text = text.replace('\u2009', ' ')  # Thin space
-        text = text.replace('\u202F', ' ')  # Narrow no-break space
-        text = text.replace('\uFEFF', '')   # Zero-width no-break space
-        
-        # Preserve line structure: normalize multiple spaces to single space within lines
-        # But keep newlines to maintain document structure
-        lines = text.split('\n')
-        cleaned_lines = []
-        for line in lines:
-            # Clean spaces within line but preserve the line break
-            cleaned_line = re.sub(r'[ \t]+', ' ', line.strip())
-            if cleaned_line:  # Only add non-empty lines
-                cleaned_lines.append(cleaned_line)
-        
-        # Rejoin with single newline (preserve structure)
-        text = '\n'.join(cleaned_lines)
-        
-        # Remove very long sequences of repeated characters (corruption indicators)
-        text = re.sub(r'(.)\1{10,}', r'\1\1', text)
-        
-        # Remove excessive consecutive newlines (max 2)
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        
-        return text.strip()
+
+        normalized_lines = []
+        for raw_line in text.replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            # Keep line boundaries to improve section extraction quality.
+            line = re.sub(r'\s+', ' ', line)
+            line = re.sub(r'[^\w\s\.\,\;\:\!\?\-\(\)\[\]\@\#\$\%\&\*\+\=\_\|\\\/"\'`~]', '', line)
+            line = re.sub(r'(.)\1{5,}', r'\1\1', line)
+
+            if line:
+                normalized_lines.append(line)
+
+        return '\n'.join(normalized_lines).strip()
     
     def extract_resume_sections(self, text: str) -> Dict[str, str]:
         """Extract structured information from resume text"""
@@ -479,8 +699,6 @@ class DocumentProcessor:
             'other': ''
         }
         
-        # Convert to lowercase for section detection
-        text_lower = text.lower()
         lines = text.split('\n')
         
         current_section = 'personal_info'
@@ -533,527 +751,17 @@ class DocumentProcessor:
         
         return sections
     
-    def extract_contact_info(self, text: str, file_path: str = None) -> Dict[str, Optional[str]]:
-        """
-        Extract contact information from text - aligned with frontend logic.
-        
-        Args:
-            text: Extracted text content from the document
-            file_path: Optional path to the original file (for PDF hyperlink extraction)
-        
-        Returns:
-            Dict with name, email, phone, linkedin, location
-        """
-        contact_info = {
-            'name': None,
-            'email': None,
-            'phone': None,
-            'linkedin': None,
-            'location': None
+    def extract_contact_info(self, text: str) -> Dict[str, Optional[str]]:
+        """Backward-compatible contact extraction used across existing routes."""
+        details = self.extract_candidate_details_with_confidence(text)
+        return {
+            'name': None if details['name'] in {'Not Found', 'Unknown Candidate'} else details['name'],
+            'email': None if details['email'] == 'Not Found' else details['email'],
+            'phone': None if details['phone'] == 'Not Found' else details['phone'],
+            'linkedin': None if details['linkedin'] == 'Not Found' else details['linkedin'],
+            'location': None,
+            'confidence': details.get('confidence', {})
         }
-        
-        if not text or len(text.strip()) < 10:
-            return contact_info
-        
-        # Extract email - robust pattern
-        email_patterns = [
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b',
-            r'[A-Za-z0-9._%+-]+\s*\[at\]\s*[A-Za-z0-9.-]+\s*\[dot\]\s*[A-Za-z]{2,}',
-            r'[A-Za-z0-9._%+-]+\s+at\s+[A-Za-z0-9.-]+\s+dot\s+[A-Za-z]{2,}',
-        ]
-        
-        for pattern in email_patterns:
-            email_match = re.search(pattern, text, re.IGNORECASE)
-            if email_match:
-                email = email_match.group()
-                email = re.sub(r'\s*\[at\]\s*', '@', email, flags=re.IGNORECASE)
-                email = re.sub(r'\s+at\s+', '@', email, flags=re.IGNORECASE)
-                email = re.sub(r'\s*\[dot\]\s*', '.', email, flags=re.IGNORECASE)
-                email = re.sub(r'\s+dot\s+', '.', email, flags=re.IGNORECASE)
-                if re.match(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$', email):
-                    contact_info['email'] = email
-                    break
-        
-        # Extract phone - IMPROVED with expanded format support
-        contact_info['phone'] = self._extract_phone_number(text)
-        
-        # Extract name using positional heuristics (top of document) - same logic as frontend
-        banned = re.compile(r'\b(RESUME|CURRICULUM|VITAE|CONTACT|SUMMARY|OBJECTIVE|EXPERIENCE|EDUCATION|SKILLS|PROJECTS|PHONE|EMAIL|ADDRESS|CITY|STATE|ZIP|COUNTRY|PAGE|DATE)\b', re.IGNORECASE)
-        lines = text.split('\n')[:10]
-        
-        # Get first 3-5 non-empty lines
-        non_empty_lines = []
-        for line in lines:
-            line = line.strip()
-            if line and len(line) >= 3:
-                non_empty_lines.append(line)
-                if len(non_empty_lines) >= 5:
-                    break
-        
-        for i, line in enumerate(non_empty_lines[:5]):
-            # Skip headers, contact info, metadata
-            if banned.search(line):
-                continue
-            if re.match(r'^[A-Z\s]{0,3}$', line):
-                continue
-            if '@' in line and not re.match(r'^[A-Z][a-z]+', line):
-                continue
-            if 'http' in line:
-                continue
-            if re.search(r'^\+?\d[\d\s().-]{7,}', line):
-                continue
-            if re.search(r'^\d+[\/\-]\d+[\/\-]\d+', line):
-                continue
-            
-            # Pattern 1: Standard name format - FirstName LastName
-            name_match = re.match(r'^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-zA-Z\-\']{1,20}){1,3})\b', line)
-            if name_match:
-                candidate = name_match.group(1).strip()
-                words = candidate.split()
-                if 2 <= len(words) <= 4 and not banned.search(candidate):
-                    # Validate all words start with capital
-                    if all(re.match(r'^[A-Z][a-z]+', w) for w in words):
-                        contact_info['name'] = candidate
-                        break
-            
-            # Pattern 2: All-caps names
-            caps_match = re.match(r'^([A-Z]{2,}(?:\s+[A-Z]{2,}){1,3})\b', line)
-            if caps_match and not banned.search(caps_match.group(1)):
-                candidate = caps_match.group(1).title()
-                words = candidate.split()
-                if 2 <= len(words) <= 4:
-                    contact_info['name'] = candidate
-                    break
-            
-            # Pattern 3: Mixed case but valid structure
-            mixed_match = re.match(r'^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})(?:\s|$)', line)
-            if mixed_match:
-                candidate = mixed_match.group(1).strip()
-                words = candidate.split()
-                if 2 <= len(words) <= 4 and not banned.search(candidate):
-                    if all(len(w) > 1 and w[0].isupper() for w in words):
-                        contact_info['name'] = candidate
-                        break
-        
-        # Fallback: extract from LinkedIn URL
-        if not contact_info['name']:
-            li_match = re.search(r'linkedin\.com/in/([A-Za-z0-9._-]{3,80})', text, re.IGNORECASE)
-            if li_match:
-                handle = li_match.group(1)
-                name_from_li = re.sub(r'[_.-]+', ' ', handle)
-                name_from_li = re.sub(r'\d+', '', name_from_li)
-                words = [w for w in name_from_li.split() if len(w) > 1]
-                if 2 <= len(words) <= 4:
-                    contact_info['name'] = ' '.join(w.capitalize() for w in words)
-        
-        # Fallback: extract from email
-        if not contact_info['name'] and contact_info['email']:
-            local = contact_info['email'].split('@')[0]
-            local = re.sub(r'[._-]+', ' ', local)
-            local = re.sub(r'\d+', '', local)
-            words = [w for w in local.split() if len(w) > 1]
-            if 2 <= len(words) <= 4:
-                contact_info['name'] = ' '.join(w.capitalize() for w in words)
-        
-        # Extract LinkedIn URL with improved detection
-        # Strategy 1: Try text-based extraction first
-        contact_info['linkedin'] = self._extract_linkedin_url(text)
-        
-        # Strategy 2: FALLBACK - Extract from PDF hyperlinks if text extraction failed
-        # This handles resumes where LinkedIn is only a clickable link without visible URL text
-        if not contact_info['linkedin'] and file_path:
-            try:
-                hyperlinks = self.extract_pdf_hyperlinks(file_path)
-                if hyperlinks:
-                    linkedin_from_hyperlink = self.extract_linkedin_from_hyperlinks(hyperlinks)
-                    if linkedin_from_hyperlink:
-                        print(f"[Contact Info] LinkedIn found via PDF hyperlink: {linkedin_from_hyperlink}")
-                        contact_info['linkedin'] = linkedin_from_hyperlink
-            except Exception as e:
-                print(f"[Contact Info] Error extracting LinkedIn from hyperlinks: {e}")
-        
-        return contact_info
-    
-    def _normalize_text_for_linkedin(self, text: str) -> str:
-        """
-        AGGRESSIVE LINKEDIN URL NORMALIZATION
-        
-        Handles broken/split LinkedIn URLs from PDF extraction:
-        - "linkedin.com / in / username"
-        - "linkedin.com\n/in\n/username"  
-        - "www.linkedin.com in / john-doe"
-        - URLs with unicode artifacts and invisible characters
-        """
-        if not text:
-            return ""
-        
-        normalized = text
-        
-        # STEP 1: Remove zero-width and invisible unicode characters
-        normalized = re.sub(r'[\u200B-\u200D\uFEFF\u00AD\u200E\u200F]', '', normalized)
-        
-        # STEP 2: Normalize unicode whitespace to regular space
-        normalized = re.sub(r'[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]', ' ', normalized)
-        
-        # STEP 3: Normalize all line breaks to space (for URL reconstruction)
-        normalized = normalized.replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ')
-        
-        # STEP 4: Remove common PDF artifacts
-        normalized = re.sub(r'\[link\]', '', normalized, flags=re.IGNORECASE)
-        normalized = re.sub(r'\(link\)', '', normalized, flags=re.IGNORECASE)
-        normalized = re.sub(r'\[hyperlink\]', '', normalized, flags=re.IGNORECASE)
-        
-        # STEP 5: Collapse multiple spaces to single space
-        normalized = re.sub(r'\s+', ' ', normalized)
-        
-        # STEP 6: AGGRESSIVE LinkedIn URL reconstruction
-        # Handle URLs split by spaces/newlines like "linkedin.com / in / username"
-        normalized = re.sub(
-            r'linkedin\.com\s*[/\s]+\s*in\s*[/\s]+\s*([A-Za-z0-9._-]+)',
-            r'linkedin.com/in/\1',
-            normalized,
-            flags=re.IGNORECASE
-        )
-        
-        # Handle "www.linkedin.com in / username" (missing slash after .com)
-        normalized = re.sub(
-            r'(?:www\.)?linkedin\.com\s+in\s*[/\s]+\s*([A-Za-z0-9._-]+)',
-            r'linkedin.com/in/\1',
-            normalized,
-            flags=re.IGNORECASE
-        )
-        
-        # Handle "linkedin . com / in / username" (spaces around dots)
-        normalized = re.sub(
-            r'linkedin\s*\.\s*com\s*[/\s]+\s*in\s*[/\s]+\s*([A-Za-z0-9._-]+)',
-            r'linkedin.com/in/\1',
-            normalized,
-            flags=re.IGNORECASE
-        )
-        
-        # Handle "linkedin.com/in/ username" (space after /in/)
-        normalized = re.sub(
-            r'linkedin\.com/in/\s+([A-Za-z0-9._-]+)',
-            r'linkedin.com/in/\1',
-            normalized,
-            flags=re.IGNORECASE
-        )
-        
-        # Handle pub URLs similarly
-        normalized = re.sub(
-            r'linkedin\.com\s*[/\s]+\s*pub\s*[/\s]+\s*([A-Za-z0-9._-]+)',
-            r'linkedin.com/pub/\1',
-            normalized,
-            flags=re.IGNORECASE
-        )
-        
-        # STEP 7: Normalize protocol variations
-        normalized = re.sub(r'https?\s*:\s*/\s*/\s*', 'https://', normalized, flags=re.IGNORECASE)
-        
-        # STEP 8: Remove spaces around slashes in URLs
-        normalized = re.sub(r'\s*/\s*', '/', normalized)
-        
-        # STEP 9: Fix double slashes that aren't protocol
-        normalized = re.sub(r'([^:])//+', r'\1/', normalized)
-        
-        return normalized.strip()
-    
-    # Blocklist for LinkedIn username validation
-    LINKEDIN_USERNAME_BLOCKLIST = {
-        'education', 'experience', 'skills', 'projects', 'publications',
-        'summary', 'resume', 'github', 'linkedin', 'contact', 'references',
-        'certifications', 'awards', 'interests', 'languages', 'objective',
-        'profile', 'work', 'employment', 'portfolio', 'achievements',
-        'activities', 'volunteer', 'training', 'courses', 'hobbies',
-    }
-    
-    def _is_valid_linkedin_username(self, username: str) -> bool:
-        """
-        Validate LinkedIn username with strict rules.
-        
-        A valid LinkedIn username MUST:
-        1. Contain at least one lowercase letter [a-z]
-        2. Be longer than 3 characters
-        3. Contain NO spaces
-        4. NOT be fully uppercase
-        5. NOT match blocklisted keywords
-        """
-        if not username:
-            return False
-        
-        # Must be longer than 3 characters
-        if len(username) <= 3:
-            return False
-        
-        # Must contain NO spaces
-        if re.search(r'\s', username):
-            return False
-        
-        # Must contain at least one lowercase letter [a-z]
-        if not re.search(r'[a-z]', username):
-            return False
-        
-        # Must NOT be fully uppercase
-        if username == username.upper():
-            return False
-        
-        # Must NOT match blocklisted keywords (case-insensitive)
-        if username.lower() in self.LINKEDIN_USERNAME_BLOCKLIST:
-            return False
-        
-        # Must be alphanumeric with ._- only
-        if not re.match(r'^[A-Za-z0-9._-]+$', username):
-            return False
-        
-        return True
-    
-    def _clean_linkedin_username(self, username: str) -> Optional[str]:
-        """
-        Clean and validate LinkedIn username.
-        Removes trailing punctuation, validates format, applies blocklist.
-        """
-        if not username:
-            return None
-        
-        # Remove trailing punctuation, spaces, and common URL artifacts
-        cleaned = re.sub(r'[.,;:!?\s]+$', '', username)
-        cleaned = re.sub(r'[)\]}>]+$', '', cleaned)
-        cleaned = re.sub(r'[/\\]+$', '', cleaned)
-        cleaned = cleaned.strip()
-        
-        # Remove query parameters if present
-        if '?' in cleaned:
-            cleaned = cleaned.split('?')[0]
-        
-        # Remove hash fragments if present
-        if '#' in cleaned:
-            cleaned = cleaned.split('#')[0]
-        
-        # CRITICAL: Apply strict validation rules
-        # This prevents false positives like "EDUCATION", "Github", etc.
-        if not self._is_valid_linkedin_username(cleaned):
-            return None
-        
-        # Final length check
-        if len(cleaned) > 100:
-            return None
-        
-        return cleaned
-    
-    def _extract_linkedin_url(self, text: str) -> Optional[str]:
-        """
-        IMPROVED LINKEDIN EXTRACTION WITH TEXT NORMALIZATION
-        
-        Handles:
-        - Unicode characters and zero-width spaces
-        - Icon-based LinkedIn text split across lines
-        - Various URL formats (http/https, www, /in/, /pub/, /profile/)
-        - Text-only cases like "LinkedIn: username"
-        - Trailing punctuation and whitespace cleanup
-        """
-        if not text:
-            return None
-        
-        # STEP 1: Normalize text BEFORE extraction
-        normalized_text = self._normalize_text_for_linkedin(text)
-        
-        # STEP 2: Try full URL patterns first (highest confidence)
-        full_url_patterns = [
-            r'https?://(?:www\.)?linkedin\.com/in/([A-Za-z0-9._%-]{3,100})',
-            r'https?://(?:www\.)?linkedin\.com/pub/([A-Za-z0-9._%-]{3,100})',
-            r'https?://(?:www\.)?linkedin\.com/profile/view\?id=([A-Za-z0-9._%-]{3,100})',
-        ]
-        
-        for pattern in full_url_patterns:
-            match = re.search(pattern, normalized_text, re.IGNORECASE)
-            if match:
-                username = self._clean_linkedin_username(match.group(1))
-                if username:
-                    return f"https://linkedin.com/in/{username}"
-        
-        # STEP 3: Try partial URL patterns (no protocol)
-        partial_url_patterns = [
-            r'(?:www\.)?linkedin\.com/in/([A-Za-z0-9._%-]{3,100})',
-            r'(?:www\.)?linkedin\.com/pub/([A-Za-z0-9._%-]{3,100})',
-            r'linkedin\.com/profile/view\?id=([A-Za-z0-9._%-]{3,100})',
-        ]
-        
-        for pattern in partial_url_patterns:
-            match = re.search(pattern, normalized_text, re.IGNORECASE)
-            if match:
-                username = self._clean_linkedin_username(match.group(1))
-                if username:
-                    return f"https://linkedin.com/in/{username}"
-        
-        # STEP 4: Try text-based patterns (LinkedIn: username, LinkedIn - username, etc.)
-        # CRITICAL: These patterns are more prone to false positives, so we apply strict validation
-        text_patterns = [
-            r'linkedin\s*[:\-|]\s*(?:profile|url|link)?\s*[:\-|]?\s*([A-Za-z0-9._-]{4,60})',
-            r'linkedin\s*[:\-|]\s*@?([A-Za-z0-9._-]{4,60})',
-        ]
-        
-        for pattern in text_patterns:
-            match = re.search(pattern, normalized_text, re.IGNORECASE)
-            if match:
-                username = match.group(1).strip()
-                # STRICT validation: use _clean_linkedin_username which applies blocklist
-                validated_username = self._clean_linkedin_username(username)
-                if validated_username and '@' not in username and 'http' not in username and '.com' not in username:
-                    return f"https://linkedin.com/in/{validated_username}"
-        
-        # NOTE: Removed overly permissive patterns that caused false positives
-        return None
-    
-    def _normalize_text_for_phone(self, text: str) -> str:
-        """
-        Normalize text for phone extraction.
-        Handles PDF layout quirks and unicode issues.
-        """
-        if not text:
-            return ""
-        
-        normalized = text
-        
-        # Remove zero-width and invisible characters
-        normalized = re.sub(r'[\u200B-\u200D\uFEFF\u00AD]', '', normalized)
-        
-        # Normalize unicode whitespace
-        normalized = re.sub(r'[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]', ' ', normalized)
-        
-        # Normalize line breaks that might split phone numbers
-        normalized = normalized.replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ')
-        
-        # Collapse multiple spaces
-        normalized = re.sub(r'\s+', ' ', normalized)
-        
-        # Normalize common phone label prefixes
-        normalized = re.sub(r'(?:telephone|telefono|fax)[:\s]*', 'phone: ', normalized, flags=re.IGNORECASE)
-        
-        return normalized.strip()
-    
-    def _is_valid_phone_number(self, digits: str) -> bool:
-        """
-        Validate phone number digits.
-        
-        Rules:
-        - Valid length: 10-15 digits
-        - NOT a year (1900-2099)
-        - NOT repeated digits
-        - NOT all zeros
-        - Has at least 3 unique digits
-        """
-        if not digits:
-            return False
-        
-        # Valid length: 10-15 digits
-        if len(digits) < 10 or len(digits) > 15:
-            return False
-        
-        # Reject year-like numbers
-        if re.match(r'^(19|20)\d{2}$', digits):
-            return False
-        
-        # Reject if more than 6 consecutive repeated digits
-        if re.search(r'(\d)\1{6,}', digits):
-            return False
-        
-        # Reject all zeros
-        if re.match(r'^0+$', digits):
-            return False
-        
-        # Reject all same digit
-        if re.match(r'^(\d)\1+$', digits):
-            return False
-        
-        # Must have at least 3 unique digits
-        unique_digits = len(set(digits))
-        if unique_digits < 3:
-            return False
-        
-        # Reject common non-phone patterns
-        if digits.startswith('1234567890') or digits.startswith('0987654321'):
-            return False
-        
-        return True
-    
-    def _normalize_phone_output(self, digits: str) -> str:
-        """
-        Normalize phone number for output.
-        Preserves country code, formats consistently.
-        """
-        if not digits:
-            return ""
-        
-        # 11 digit US number with country code
-        if len(digits) == 11 and digits.startswith('1'):
-            return f"+1 {digits[1:4]} {digits[4:7]} {digits[7:]}"
-        
-        # 10 digit US number
-        if len(digits) == 10:
-            return f"+1 {digits[0:3]} {digits[3:6]} {digits[6:]}"
-        
-        # International number
-        if len(digits) > 10:
-            return f"+{digits}"
-        
-        return digits
-    
-    def _extract_phone_number(self, text: str) -> Optional[str]:
-        """
-        IMPROVED PHONE EXTRACTION WITH EXPANDED FORMAT SUPPORT
-        
-        Supports:
-        - +1-XXX-XXX-XXXX
-        - +1 XXX XXX XXXX  
-        - XXX.XXX.XXXX
-        - (XXX) XXX-XXXX
-        - XXX-XXX-XXXX
-        - XXXXXXXXXX (10 digits no separators)
-        - International formats with 10-15 digits
-        """
-        if not text:
-            return None
-        
-        # Normalize text for phone extraction
-        normalized_text = self._normalize_text_for_phone(text)
-        
-        # EXPANDED phone patterns
-        phone_patterns = [
-            # US formats with country code
-            r'\+1[\s.-]?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})\b',
-            
-            # US formats: (XXX) XXX-XXXX
-            r'\((\d{3})\)[\s.-]?(\d{3})[\s.-]?(\d{4})\b',
-            
-            # US formats: XXX-XXX-XXXX, XXX.XXX.XXXX, XXX XXX XXXX
-            r'\b(\d{3})[\s.-](\d{3})[\s.-](\d{4})\b',
-            
-            # 10 digits with optional leading 1
-            r'\b1?(\d{3})(\d{3})(\d{4})\b',
-            
-            # International formats
-            r'\+\d{1,3}[\s.-]?\d{1,4}[\s.-]?\d{2,4}[\s.-]?\d{2,4}[\s.-]?\d{0,4}\b',
-            
-            # Formats with area code in parentheses
-            r'\(?(\d{3})\)?[\s.\-/]?(\d{3})[\s.\-/]?(\d{4})\b',
-            
-            # Phone with prefix labels
-            r'(?:tel|phone|cell|mobile|ph)[:\s]*\+?1?[\s.-]?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})\b',
-        ]
-        
-        for pattern in phone_patterns:
-            matches = re.finditer(pattern, normalized_text, re.IGNORECASE)
-            for match in matches:
-                candidate = match.group(0)
-                digits = re.sub(r'\D', '', candidate)
-                
-                # Validate phone number
-                if not self._is_valid_phone_number(digits):
-                    continue
-                
-                return self._normalize_phone_output(digits)
-        
-        return None
     
     def extract_skills(self, text: str) -> List[str]:
         """Extract skills from text"""
@@ -1125,3 +833,13 @@ class DocumentProcessor:
 
 # Global document processor instance
 document_processor = DocumentProcessor()
+
+
+def extract_candidate_details(text: str) -> dict:
+    """Module-level extraction helper for direct usage in Flask routes/services."""
+    return document_processor.extract_candidate_details(text)
+
+
+def is_valid_name(name: str) -> bool:
+    """Module-level name validation helper required by parsing pipeline."""
+    return document_processor.is_valid_name(name)

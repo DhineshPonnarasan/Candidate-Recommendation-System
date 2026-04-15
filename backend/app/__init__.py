@@ -1,1 +1,1 @@
-# App package
+# Backend app package marker

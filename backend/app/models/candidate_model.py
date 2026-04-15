@@ -1,6 +1,9 @@
 from datetime import datetime
-import pickle
 import json
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+
 from config.sqlite_database import db_config
 
 class Candidate:
@@ -20,6 +23,71 @@ class Candidate:
         self.is_active = True
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
+
+    @staticmethod
+    def _serialize_skills(skills: Optional[List[str]]) -> str:
+        return json.dumps(skills or [])
+
+    @staticmethod
+    def _deserialize_skills(skills_raw: Any) -> List[str]:
+        if not skills_raw:
+            return []
+        if isinstance(skills_raw, list):
+            return [str(skill) for skill in skills_raw]
+        if isinstance(skills_raw, str):
+            try:
+                parsed = json.loads(skills_raw)
+                if isinstance(parsed, list):
+                    return [str(skill) for skill in parsed]
+            except (TypeError, json.JSONDecodeError):
+                return [s.strip() for s in skills_raw.split(',') if s.strip()]
+        return []
+
+    @staticmethod
+    def _serialize_embedding(embedding: Optional[Any]) -> Optional[bytes]:
+        if embedding is None:
+            return None
+        if hasattr(embedding, 'tolist'):
+            payload = embedding.tolist()
+        else:
+            payload = embedding
+        return json.dumps(payload).encode('utf-8')
+
+    @staticmethod
+    def _deserialize_embedding(embedding_blob: Optional[Any]) -> Optional[np.ndarray]:
+        if embedding_blob is None:
+            return None
+
+        if isinstance(embedding_blob, memoryview):
+            embedding_blob = embedding_blob.tobytes()
+
+        if isinstance(embedding_blob, bytes):
+            try:
+                data = json.loads(embedding_blob.decode('utf-8'))
+                if isinstance(data, list):
+                    return np.array(data, dtype=np.float32)
+            except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+                return None
+
+        if isinstance(embedding_blob, str):
+            try:
+                data = json.loads(embedding_blob)
+                if isinstance(data, list):
+                    return np.array(data, dtype=np.float32)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return None
+
+        return None
+
+    @classmethod
+    def _row_to_candidate(cls, row: Any, include_embedding: bool = False) -> Dict[str, Any]:
+        candidate = dict(row)
+        candidate['skills'] = cls._deserialize_skills(candidate.get('skills'))
+        if include_embedding:
+            candidate['embedding'] = cls._deserialize_embedding(candidate.get('embedding'))
+        else:
+            candidate.pop('embedding', None)
+        return candidate
     
     @classmethod
     def create(cls, name, email=None, phone=None, skills=None, experience_years=None,
@@ -29,46 +97,37 @@ class Candidate:
         if not conn:
             return None
             
+        cursor = None
         try:
             cursor = conn.cursor()
-            embedding_binary = pickle.dumps(embedding) if embedding is not None else None
-            
-            # SQLite: Convert skills list to JSON string, use ? placeholders, no RETURNING clause
-            import json
-            skills_json = json.dumps(skills) if skills else None
-            
+            embedding_binary = cls._serialize_embedding(embedding)
+            skills_json = cls._serialize_skills(skills)
+
             cursor.execute('''
-                INSERT INTO candidates (name, email, phone, skills, experience_years, 
+                INSERT INTO candidates (name, email, phone, skills, experience_years,
                                       education, location, resume_text, file_path, embedding)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (name, email, phone, skills_json, experience_years, education, 
+            ''', (name, email, phone, skills_json, experience_years, education,
                   location, resume_text, file_path, embedding_binary))
-            
-            candidate_id = cursor.lastrowid
-            conn.commit()
-            
-            # Fetch the inserted record
+
             cursor.execute('''
-                SELECT id, name, email, phone, skills, experience_years, 
+                SELECT id, name, email, phone, skills, experience_years,
                        education, location, is_active, created_at
-                FROM candidates WHERE id = ?
-            ''', (candidate_id,))
-            
+                FROM candidates
+                WHERE id = ?
+            ''', (cursor.lastrowid,))
+
             result = cursor.fetchone()
-            if result:
-                candidate_data = dict(result)
-                # Convert skills JSON back to list
-                if candidate_data['skills']:
-                    candidate_data['skills'] = json.loads(candidate_data['skills'])
-                return candidate_data
-            return None
+            conn.commit()
+            return cls._row_to_candidate(result) if result else None
             
         except Exception as e:
             conn.rollback()
             print(f"Error creating candidate: {e}")
             return None
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -78,6 +137,7 @@ class Candidate:
         if not conn:
             return None
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
@@ -89,21 +149,15 @@ class Candidate:
             
             result = cursor.fetchone()
             if result:
-                candidate_data = dict(result)
-                # Convert embedding from binary
-                if candidate_data.get('embedding'):
-                    candidate_data['embedding'] = pickle.loads(candidate_data['embedding'])
-                # Convert skills from JSON string to list
-                if candidate_data.get('skills'):
-                    candidate_data['skills'] = json.loads(candidate_data['skills'])
-                return candidate_data
+                return cls._row_to_candidate(result, include_embedding=True)
             return None
             
         except Exception as e:
             print(f"Error finding candidate: {e}")
             return None
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -113,6 +167,7 @@ class Candidate:
         if not conn:
             return None
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
@@ -123,19 +178,14 @@ class Candidate:
             ''', (email,))
             
             result = cursor.fetchone()
-            if result:
-                candidate_data = dict(result)
-                # Convert skills from JSON string to list
-                if candidate_data.get('skills'):
-                    candidate_data['skills'] = json.loads(candidate_data['skills'])
-                return candidate_data
-            return None
+            return cls._row_to_candidate(result) if result else None
             
         except Exception as e:
             print(f"Error finding candidate by email: {e}")
             return None
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -145,6 +195,7 @@ class Candidate:
         if not conn:
             return []
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
@@ -160,21 +211,15 @@ class Candidate:
             results = cursor.fetchall()
             candidates = []
             for row in results:
-                candidate_data = dict(row)
-                # Convert embedding from binary
-                if candidate_data.get('embedding'):
-                    candidate_data['embedding'] = pickle.loads(candidate_data['embedding'])
-                # Convert skills from JSON string to list
-                if candidate_data.get('skills'):
-                    candidate_data['skills'] = json.loads(candidate_data['skills'])
-                candidates.append(candidate_data)
+                candidates.append(cls._row_to_candidate(row, include_embedding=True))
             return candidates
             
         except Exception as e:
             print(f"Error getting active candidates: {e}")
             return []
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -184,6 +229,7 @@ class Candidate:
         if not conn:
             return []
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
@@ -198,21 +244,15 @@ class Candidate:
             results = cursor.fetchall()
             candidates = []
             for row in results:
-                candidate_data = dict(row)
-                # Convert embedding from binary
-                if candidate_data.get('embedding'):
-                    candidate_data['embedding'] = pickle.loads(candidate_data['embedding'])
-                # Convert skills from JSON string to list
-                if candidate_data.get('skills'):
-                    candidate_data['skills'] = json.loads(candidate_data['skills'])
-                candidates.append(candidate_data)
+                candidates.append(cls._row_to_candidate(row, include_embedding=True))
             return candidates
             
         except Exception as e:
             print(f"Error getting candidates with embeddings: {e}")
             return []
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -222,9 +262,10 @@ class Candidate:
         if not conn:
             return False
             
+        cursor = None
         try:
             cursor = conn.cursor()
-            embedding_binary = pickle.dumps(embedding) if embedding is not None else None
+            embedding_binary = cls._serialize_embedding(embedding)
             
             cursor.execute('''
                 UPDATE candidates 
@@ -240,7 +281,8 @@ class Candidate:
             print(f"Error updating candidate embedding: {e}")
             return False
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -250,6 +292,7 @@ class Candidate:
         if not conn:
             return []
             
+        cursor = None
         try:
             cursor = conn.cursor()
             search_query = f"%{query.lower()}%"
@@ -260,32 +303,23 @@ class Candidate:
                        education, location, created_at, updated_at
                 FROM candidates 
                 WHERE is_active = 1
-                AND (LOWER(name) LIKE ? 
-                     OR LOWER(email) LIKE ? 
-                     OR LOWER(location) LIKE ?
-                     OR LOWER(skills) LIKE ?)
+                AND (LOWER(COALESCE(name, '')) LIKE ?
+                     OR LOWER(COALESCE(email, '')) LIKE ?
+                     OR LOWER(COALESCE(location, '')) LIKE ?
+                     OR LOWER(COALESCE(skills, '')) LIKE ?)
                 ORDER BY created_at DESC
                 LIMIT ?
             ''', (search_query, search_query, search_query, search_query, limit))
             
             results = cursor.fetchall()
-            candidates = []
-            for row in results:
-                candidate_data = dict(row)
-                # Convert skills from JSON string to list
-                if candidate_data.get('skills'):
-                    try:
-                        candidate_data['skills'] = json.loads(candidate_data['skills'])
-                    except (json.JSONDecodeError, TypeError):
-                        candidate_data['skills'] = []
-                candidates.append(candidate_data)
-            return candidates
+            return [cls._row_to_candidate(row) for row in results]
             
         except Exception as e:
             print(f"Error searching candidates: {e}")
             return []
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -295,6 +329,7 @@ class Candidate:
         if not conn:
             return False
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
@@ -311,7 +346,8 @@ class Candidate:
             print(f"Error deleting candidate: {e}")
             return False
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -321,10 +357,11 @@ class Candidate:
         if not conn:
             return {}
             
+        cursor = None
         try:
             cursor = conn.cursor()
             
-            # Total active candidates (SQLite uses 1/0 for boolean)
+            # Total active candidates
             cursor.execute('SELECT COUNT(*) FROM candidates WHERE is_active = 1')
             total_candidates = cursor.fetchone()[0]
             
@@ -346,5 +383,6 @@ class Candidate:
             print(f"Error getting candidate statistics: {e}")
             return {}
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()

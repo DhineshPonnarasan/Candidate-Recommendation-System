@@ -89,33 +89,28 @@ const AIRecommendationForm = () => {
               const backendResult = await resumeService.uploadResume(file);
               setProcessingStep(`Calculating similarity for ${file.name}`);
               const similarity = await calculateSemanticSimilarity(jobDescription, backendResult.resume_text);
-              
-              // FAANG CORRECTNESS: Identity MUST be extracted - block if failed
-              let finalName = backendResult.name && backendResult.name !== 'Unknown Candidate' 
-                ? backendResult.name 
-                : extractCandidateNameFromText(backendResult.resume_text);
-              
-              if (!finalName || finalName === 'Unknown Candidate' || finalName.trim().length < 3) {
-                throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
+              const fallbackContact = extractContactInfoFromText(backendResult.resume_text || '');
+              let resolvedName = backendResult.name || extractCandidateNameFromText(backendResult.resume_text || '');
+              if (!resolvedName || resolvedName === 'Unknown Candidate' || resolvedName.length < 3) {
+                resolvedName = extractNameFromFilename(file.name);
               }
-              
               candidateData = {
                 id: `cand_${i}_${Date.now()}`,
-                name: finalName,
-                email: backendResult.email || '',
-                phone: backendResult.phone || '',
-                linkedin: '',
+                name: resolvedName,
+                email: backendResult.email || fallbackContact.email || '',
+                phone: backendResult.phone || fallbackContact.phone || '',
+                linkedin: fallbackContact.linkedin || '',
                 similarity: similarity,
                 skills: backendResult.skills || [],
                 summary: generateCandidateSummary({
-                  name: finalName,
+                  name: resolvedName,
                   resumeText: backendResult.resume_text,
                   jobText: jobDescription,
                   similarity: similarity,
                   contact: { 
-                    email: backendResult.email || '', 
-                    phone: backendResult.phone || '', 
-                    linkedin: '' 
+                    email: backendResult.email || fallbackContact.email || '',
+                    phone: backendResult.phone || fallbackContact.phone || '',
+                    linkedin: fallbackContact.linkedin || ''
                   },
                   skills: backendResult.skills || [],
                 }),

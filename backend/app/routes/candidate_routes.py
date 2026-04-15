@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 import os
+import uuid
 from werkzeug.utils import secure_filename
 from models.candidate_model import Candidate
 from services.document_service import document_processor
@@ -14,27 +15,43 @@ def save_uploaded_file(file, folder='resumes'):
     try:
         if not file or file.filename == '':
             return None, 'No file selected'
+
+        if request.content_length and request.content_length > AppConfig.MAX_CONTENT_LENGTH:
+            return None, f'File exceeds max size limit of {AppConfig.MAX_CONTENT_LENGTH} bytes'
         
         if not AppConfig.allowed_file(file.filename):
             return None, 'File type not allowed'
         
         filename = secure_filename(file.filename)
-        # Add timestamp to avoid filename conflicts
-        import time
-        timestamp = str(int(time.time()))
         name, ext = os.path.splitext(filename)
-        filename = f"{name}_{timestamp}{ext}"
+        unique_name = uuid.uuid4().hex
+        filename = f"{name[:64]}_{unique_name}{ext.lower()}"
         
         # Create upload directory if it doesn't exist
         upload_path = os.path.join(AppConfig.UPLOAD_FOLDER, folder)
         os.makedirs(upload_path, exist_ok=True)
+        upload_path_abs = os.path.abspath(upload_path)
         
-        file_path = os.path.join(upload_path, filename)
+        file_path = os.path.abspath(os.path.join(upload_path, filename))
+        if not file_path.startswith(upload_path_abs + os.sep):
+            return None, 'Invalid upload path'
+
         file.save(file_path)
+
+        if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+            return None, 'Uploaded file is empty'
         
         return file_path, None
     except Exception as e:
         return None, f'Error saving file: {str(e)}'
+
+
+def _safe_remove_file(file_path):
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
 
 @candidate_bp.route('/upload', methods=['POST'])
 def upload_candidate_resume():
@@ -55,7 +72,8 @@ def upload_candidate_resume():
         file_extension = os.path.splitext(file.filename)[1].lower().lstrip('.')
         resume_text = document_processor.extract_text(file_path, file_extension)
         
-        if not resume_text:
+        if not resume_text or len(resume_text.strip()) < 30:
+            _safe_remove_file(file_path)
             return jsonify({'error': 'Could not extract text from resume'}), 400
         
         # Extract structured information (pass file_path for PDF hyperlink extraction)
@@ -67,17 +85,10 @@ def upload_candidate_resume():
         # Generate embedding
         embedding = embedding_service.generate_embedding(resume_text)
         
-        # Validate extracted text - reject binary data
-        if resume_text.strip().startswith('%PDF-') or '\x00' in resume_text:
-            print(f"[ERROR] Binary PDF data detected in extracted text for {file.filename}")
-            return jsonify({'error': 'PDF parsing failed - received binary data instead of text. The PDF may be corrupted or require special handling.'}), 400
-        
-        # Prepare candidate data - use extracted info, fallback to form data, then empty string
-        # Only use 'Unknown Candidate' if extraction truly failed
-        candidate_name = contact_info.get('name') or request.form.get('name') or 'Unknown Candidate'
-        candidate_email = contact_info.get('email') or request.form.get('email') or ''
-        candidate_phone = contact_info.get('phone') or request.form.get('phone') or ''
-        candidate_linkedin = contact_info.get('linkedin') or ''
+        # Prepare candidate data
+        candidate_name = contact_info.get('name') or 'Unknown Candidate'
+        candidate_email = contact_info.get('email') or request.form.get('email')
+        candidate_phone = contact_info.get('phone') or request.form.get('phone')
         
         # Create candidate record
         candidate = Candidate.create(
@@ -94,6 +105,7 @@ def upload_candidate_resume():
         )
         
         if not candidate:
+            _safe_remove_file(file_path)
             return jsonify({'error': 'Failed to create candidate record'}), 500
         
         # Return complete candidate data including all extracted fields
@@ -104,17 +116,16 @@ def upload_candidate_resume():
                 'name': candidate['name'],
                 'email': candidate['email'],
                 'phone': candidate['phone'],
-                'linkedin': candidate_linkedin,  # Include LinkedIn
+                'linkedin': contact_info.get('linkedin'),
                 'skills': candidate['skills'],
                 'experience_years': candidate['experience_years'],
                 'education': candidate['education'],
-                'location': contact_info.get('location'),
-                'resume_text': resume_text,  # CRITICAL: Always include resume_text
-                'file_path': file_path,
+                'resume_text': resume_text,
                 'extracted_info': {
                     'sections': resume_sections,
                     'skills_found': len(skills),
-                    'has_embedding': embedding is not None
+                    'has_embedding': embedding is not None,
+                    'contact_info': contact_info
                 }
             },
             # Also return at top level for easier access
@@ -161,7 +172,8 @@ def bulk_upload_candidates():
                 file_extension = os.path.splitext(file.filename)[1].lower().lstrip('.')
                 resume_text = document_processor.extract_text(file_path, file_extension)
                 
-                if not resume_text:
+                if not resume_text or len(resume_text.strip()) < 30:
+                    _safe_remove_file(file_path)
                     failed_uploads.append({'filename': file.filename, 'error': 'Could not extract text'})
                     continue
                 
@@ -175,7 +187,7 @@ def bulk_upload_candidates():
                 embedding = embedding_service.generate_embedding(resume_text)
                 
                 # Create candidate
-                candidate_name = contact_info.get('name') or f"Candidate from {file.filename}"
+                candidate_name = contact_info.get('name') or 'Unknown Candidate'
                 
                 candidate = Candidate.create(
                     name=candidate_name,
@@ -199,9 +211,11 @@ def bulk_upload_candidates():
                         'skills_found': len(skills)
                     })
                 else:
+                    _safe_remove_file(file_path)
                     failed_uploads.append({'filename': file.filename, 'error': 'Failed to create candidate record'})
                     
             except Exception as e:
+                _safe_remove_file(file_path if 'file_path' in locals() else None)
                 failed_uploads.append({'filename': file.filename, 'error': str(e)})
         
         return jsonify({
@@ -246,10 +260,9 @@ def get_candidates():
 
 @candidate_bp.route('/<int:candidate_id>', methods=['GET'])
 @jwt_required()
-def get_candidate_details():
+def get_candidate_details(candidate_id):
     """Get detailed information about a specific candidate"""
     try:
-        candidate_id = request.view_args['candidate_id']
         candidate = Candidate.find_by_id(candidate_id)
         
         if not candidate:
@@ -267,11 +280,9 @@ def get_candidate_details():
 
 @candidate_bp.route('/<int:candidate_id>', methods=['DELETE'])
 @jwt_required()
-def delete_candidate():
+def delete_candidate(candidate_id):
     """Delete a candidate"""
     try:
-        candidate_id = request.view_args['candidate_id']
-        
         success = Candidate.delete(candidate_id)
         
         if not success:
@@ -297,10 +308,9 @@ def get_candidate_statistics():
 
 @candidate_bp.route('/<int:candidate_id>/reprocess', methods=['POST'])
 @jwt_required()
-def reprocess_candidate():
+def reprocess_candidate(candidate_id):
     """Reprocess a candidate's resume to update extraction and embedding"""
     try:
-        candidate_id = request.view_args['candidate_id']
         candidate = Candidate.find_by_id(candidate_id)
         
         if not candidate:

@@ -20,9 +20,14 @@ class Application:
             
             cursor.execute('''
                 INSERT INTO applications (user_id, job_title, company, application_date, status, notes, follow_up_date)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, job_title, company, application_date, status, notes, follow_up_date, created_at
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (user_id, job_title, company, application_date, status, notes, follow_up_date))
+
+            cursor.execute('''
+                SELECT id, job_title, company, application_date, status, notes, follow_up_date, created_at
+                FROM applications
+                WHERE id = ?
+            ''', (cursor.lastrowid,))
             
             result = cursor.fetchone()
             conn.commit()
@@ -49,9 +54,9 @@ class Application:
                 SELECT id, job_title, company, application_date, status, notes, 
                        follow_up_date, interview_date, created_at, updated_at
                 FROM applications 
-                WHERE user_id = %s 
+                WHERE user_id = ? 
                 ORDER BY application_date DESC, created_at DESC
-                LIMIT %s OFFSET %s
+                LIMIT ? OFFSET ?
             ''', (user_id, limit, offset))
             
             results = cursor.fetchall()
@@ -77,7 +82,7 @@ class Application:
                 SELECT id, job_title, company, application_date, status, notes, 
                        follow_up_date, interview_date, created_at, updated_at
                 FROM applications 
-                WHERE id = %s AND user_id = %s
+                WHERE id = ? AND user_id = ?
             ''', (application_id, user_id))
             
             result = cursor.fetchone()
@@ -108,7 +113,7 @@ class Application:
             
             for field in allowed_fields:
                 if field in kwargs:
-                    update_fields.append(f"{field} = %s")
+                    update_fields.append(f"{field} = ?")
                     values.append(kwargs[field])
             
             if not update_fields:
@@ -120,7 +125,7 @@ class Application:
             query = f'''
                 UPDATE applications 
                 SET {', '.join(update_fields)}
-                WHERE id = %s AND user_id = %s
+                WHERE id = ? AND user_id = ?
             '''
             
             cursor.execute(query, values)
@@ -146,7 +151,7 @@ class Application:
             cursor = conn.cursor()
             cursor.execute('''
                 DELETE FROM applications 
-                WHERE id = %s AND user_id = %s
+                WHERE id = ? AND user_id = ?
             ''', (application_id, user_id))
             
             conn.commit()
@@ -171,14 +176,14 @@ class Application:
             cursor = conn.cursor()
             
             # Total applications
-            cursor.execute('SELECT COUNT(*) FROM applications WHERE user_id = %s', (user_id,))
+            cursor.execute('SELECT COUNT(*) FROM applications WHERE user_id = ?', (user_id,))
             total_applications = cursor.fetchone()[0]
             
             # Applications by status
             cursor.execute('''
                 SELECT status, COUNT(*) 
                 FROM applications 
-                WHERE user_id = %s 
+                WHERE user_id = ? 
                 GROUP BY status
             ''', (user_id,))
             status_counts = dict(cursor.fetchall())
@@ -187,7 +192,7 @@ class Application:
             cursor.execute('''
                 SELECT COUNT(*) 
                 FROM applications 
-                WHERE user_id = %s AND application_date >= CURRENT_DATE - INTERVAL '30 days'
+                WHERE user_id = ? AND application_date >= date('now', '-30 day')
             ''', (user_id,))
             recent_applications = cursor.fetchone()[0]
             
@@ -195,7 +200,7 @@ class Application:
             cursor.execute('''
                 SELECT COUNT(*) 
                 FROM applications 
-                WHERE user_id = %s AND follow_up_date >= CURRENT_DATE
+                WHERE user_id = ? AND follow_up_date >= date('now')
             ''', (user_id,))
             upcoming_followups = cursor.fetchone()[0]
             

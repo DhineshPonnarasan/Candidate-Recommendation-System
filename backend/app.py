@@ -7,11 +7,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-import sys
-import os
-
-# Adding the current directory to Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config.app_config import AppConfig
 from config.jwt_config import JWTConfig
@@ -26,7 +21,7 @@ def create_app():
     app.config.update(JWTConfig.get_jwt_config())
     
     # Initializing extensions with comprehensive CORS configuration
-    jwt = JWTManager(app)
+    JWTManager(app)
     
     # Enhanced CORS configuration
     CORS(app, 
@@ -126,6 +121,10 @@ def create_app():
     @app.errorhandler(500)
     def internal_error(error):
         return {'error': 'Internal server error'}, 500
+
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        return {'error': 'Uploaded file is too large'}, 413
     
     return app
 

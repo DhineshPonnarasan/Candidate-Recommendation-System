@@ -111,84 +111,42 @@ const AIRecommendationForm = () => {
             setProcessingStep(`Uploading ${file.name} to server...`);
             try {
               const backendResult = await resumeService.uploadResume(file);
-              
-              // Extract resume_text - check multiple possible locations in response
-              const resumeText = backendResult.resume_text || 
-                                (backendResult as any).resume_text || 
-                                (backendResult as any).candidate?.resume_text || 
-                                '';
-              
-              console.log(`[BACKEND] Response structure:`, {
-                hasResumeText: !!resumeText,
-                resumeTextLength: resumeText.length,
-                candidateKeys: Object.keys(backendResult),
-                topLevelKeys: Object.keys((backendResult as any))
-              });
-              
-              // Validate extracted text - reject binary data
-              if (resumeText && (resumeText.trim().startsWith('%PDF-') || resumeText.includes('\x00'))) {
-                throw new Error('Backend returned binary PDF data instead of extracted text. PDF parsing failed.');
+              const backendText = backendResult.resume_text || '';
+              const extractedContact = backendResult.extracted_info?.contact_info || {};
+              const fallbackContact = extractContactInfoFromText(backendText);
+
+              const resolvedContact = {
+                email: backendResult.email || extractedContact.email || fallbackContact.email || '',
+                phone: backendResult.phone || extractedContact.phone || fallbackContact.phone || '',
+                linkedin: backendResult.linkedin || extractedContact.linkedin || fallbackContact.linkedin || ''
+              };
+
+              let resolvedName = backendResult.name || extractedContact.name || extractCandidateNameFromText(backendText || '');
+              if (!resolvedName || resolvedName === 'Unknown Candidate' || resolvedName.length < 3) {
+                resolvedName = extractNameFromFilename(file.name);
               }
-              
-              if (!resumeText || resumeText.length === 0) {
-                console.error(`[BACKEND ERROR] No resume text in response. Full response:`, backendResult);
-                throw new Error('No resume text extracted from backend. Check backend logs for PDF parsing errors.');
-              }
-              
-              console.log(`[BACKEND] Successfully extracted ${resumeText.length} characters from ${file.name}`);
-              
+
               setProcessingStep(`Calculating similarity for ${file.name}`);
-              const similarity = await calculateSemanticSimilarity(jobDescription, resumeText);
-              
-              // Use backend-extracted data directly (backend now has multi-library parsing)
-              // Backend extracts: name, email, phone, linkedin, skills
-              const backendName = (backendResult as any).name || backendResult.name || '';
-              const backendEmail = (backendResult as any).email || backendResult.email || '';
-              const backendPhone = (backendResult as any).phone || backendResult.phone || '';
-              const backendLinkedin = (backendResult as any).linkedin || '';
-              
-              // Use backend name if valid, otherwise try one extraction attempt
-              let finalName = backendName && backendName !== 'Unknown Candidate' ? backendName : extractCandidateNameFromText(resumeText);
-              
-              // If still unknown and we have text, try aggressive extraction
-              if (finalName === 'Unknown Candidate' && resumeText.length > 50) {
-                const firstLine = resumeText.split(/\n/)[0]?.trim();
-                if (firstLine && firstLine.length > 5 && firstLine.length < 100) {
-                  const aggressiveMatch = firstLine.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/);
-                  if (aggressiveMatch) {
-                    finalName = aggressiveMatch[1];
-                  }
-                }
-              }
-              
-              // FAANG CORRECTNESS: Block if identity extraction failed
-              if (!finalName || finalName === 'Unknown Candidate' || finalName.trim().length < 3) {
-                throw new Error(`Identity extraction failed for "${file.name}". Analysis blocked to preserve correctness.`);
-              }
-              
-              // Use backend contact info directly (backend extraction is more reliable)
-              const finalEmail = backendEmail || '';
-              const finalPhone = backendPhone || '';
-              const finalLinkedin = backendLinkedin || '';
-              
+              const similarity = await calculateSemanticSimilarity(jobDescription, backendText);
+
               candidateData = {
                 id: `cand_${i}_${Date.now()}`,
-                name: finalName,
-                email: finalEmail,
-                phone: finalPhone,
-                linkedin: finalLinkedin,
+                name: resolvedName,
+                email: resolvedContact.email,
+                phone: resolvedContact.phone,
+                linkedin: resolvedContact.linkedin,
                 similarity: similarity,
                 skills: backendResult.skills || [],
                 summary: generateCandidateSummary({
-                  name: finalName,
-                  resumeText: resumeText,
+                  name: resolvedName,
+                  resumeText: backendText,
                   jobText: jobDescription,
                   similarity: similarity,
-                  contact: { email: finalEmail, phone: finalPhone, linkedin: finalLinkedin },
+                  contact: resolvedContact,
                   skills: backendResult.skills || [],
                 }),
                 fileName: file.name,
-                content: resumeText,
+                content: backendText,
               };
               
               console.log(`[BACKEND] Candidate created:`, { name: candidateData.name, email: candidateData.email, phone: candidateData.phone, linkedin: candidateData.linkedin });

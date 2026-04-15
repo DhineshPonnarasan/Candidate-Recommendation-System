@@ -1,21 +1,7 @@
 import numpy as np
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    print("Warning: sentence_transformers not installed. Embedding features will be disabled.")
-    print("Install with: pip install sentence-transformers")
-    SentenceTransformer = None
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-
-try:
-    from sklearn.metrics.pairwise import cosine_similarity
-except ImportError:
-    cosine_similarity = None
-    
-from typing import List, Dict, Tuple, Optional
-import pickle
-import os
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+from typing import List, Dict, Optional
 from config.app_config import AppConfig
 from config.redis_config import redis_config
 
@@ -69,11 +55,11 @@ class EmbeddingService:
             if use_cache:
                 cached_embedding = redis_config.get_cached_embedding(cache_key)
                 if cached_embedding is not None:
-                    return cached_embedding
+                    return np.array(cached_embedding, dtype=np.float32)
             
             # Generate embedding
             text = text.strip()
-            embedding = self.model.encode(text, convert_to_numpy=True)
+            embedding = np.array(self.model.encode(text, convert_to_numpy=True), dtype=np.float32)
             
             # Cache the embedding
             if use_cache:
@@ -97,7 +83,7 @@ class EmbeddingService:
         try:
             embeddings = []
             texts_to_process = []
-            cache_keys = []
+            cache_keys_to_process = []
             indices_to_process = []
             
             # Check cache for each text
@@ -107,30 +93,30 @@ class EmbeddingService:
                     continue
                 
                 cache_key = f"embedding:{hash(text.strip())}"
-                cache_keys.append(cache_key)
                 
                 if use_cache:
                     cached_embedding = redis_config.get_cached_embedding(cache_key)
                     if cached_embedding is not None:
-                        embeddings.append(cached_embedding)
+                        embeddings.append(np.array(cached_embedding, dtype=np.float32))
                         continue
                 
                 # Text not in cache, add to batch processing
                 texts_to_process.append(text.strip())
                 indices_to_process.append(i)
+                cache_keys_to_process.append(cache_key)
                 embeddings.append(None)  # Placeholder
             
             # Process uncached texts in batch
             if texts_to_process:
-                batch_embeddings = self.model.encode(texts_to_process, convert_to_numpy=True)
+                batch_embeddings = np.array(self.model.encode(texts_to_process, convert_to_numpy=True), dtype=np.float32)
                 
                 for j, embedding in enumerate(batch_embeddings):
                     original_index = indices_to_process[j]
                     embeddings[original_index] = embedding
                     
                     # Cache the embedding
-                    if use_cache and j < len(cache_keys):
-                        redis_config.cache_embedding(cache_keys[j], embedding)
+                    if use_cache and j < len(cache_keys_to_process):
+                        redis_config.cache_embedding(cache_keys_to_process[j], embedding)
             
             return embeddings
             

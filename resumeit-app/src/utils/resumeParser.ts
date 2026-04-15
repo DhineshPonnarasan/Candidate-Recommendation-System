@@ -1,204 +1,70 @@
 import * as mammoth from 'mammoth';
 import Tesseract from 'tesseract.js';
 let pdfjsLib: any | null = null;
+
 async function loadPdfJs(): Promise<any> {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  if (pdfjsLib) {
+    return pdfjsLib;
+  }
+
   try {
-    console.log('Loading PDF.js library...');
-    const lib = await import('pdfjs-dist');
-    const workerStrategies = [
-      {
-        name: 'Local worker file',
-        path: '/pdf.worker.mjs'
-      },
-      {
-        name: 'CDN worker (4.10.38)',
-        path: 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.mjs'
-      },
-      {
-        name: 'CDN worker (4.6.82)',
-        path: 'https://unpkg.com/pdfjs-dist@4.6.82/build/pdf.worker.mjs'
-      },
-      {
-        name: 'CDN worker (latest)',
-        path: 'https://unpkg.com/pdfjs-dist/build/pdf.worker.mjs'
-      },
-      {
-        name: 'Disable worker',
-        path: null // This will use the main thread
-      }
-    ];
-    for (const strategy of workerStrategies) {
-      try {
-        console.log(`Trying worker strategy: ${strategy.name}`);
-        if (strategy.path) {
-          (lib as any).GlobalWorkerOptions.workerSrc = strategy.path;
-        } else {
-          delete (lib as any).GlobalWorkerOptions.workerSrc;
-          (lib as any).GlobalWorkerOptions.workerSrc = '';
-        }
-        console.log('PDF.js worker configured with:', strategy.name);
-        break; // Use first working strategy
-      } catch (workerErr) {
-        console.warn(`Worker strategy failed: ${strategy.name}`, workerErr);
-        continue;
-      }
-    }
-    console.log('PDF.js library loaded successfully');
+    const lib = await import('pdfjs-dist/build/pdf');
+    (lib as any).GlobalWorkerOptions.workerSrc =
+      `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${(lib as any).version}/pdf.worker.min.js`;
+
+    pdfjsLib = lib;
     return lib;
   } catch (err) {
     console.error('Failed to load PDF.js library:', err);
     return null;
   }
 }
+
 async function extractPdfText(file: File): Promise<string> {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
   try {
     const lib = await loadPdfJs();
     if (!lib) {
       console.warn('PDF.js library not available');
       return '';
     }
-    console.log('Loading PDF file:', file.name, 'Size:', file.size);
+
     const data = new Uint8Array(await file.arrayBuffer());
-    const v = (lib as any).version || '4.10.38';
-    const configs = [
-      {
-        name: 'Standard config',
-        config: {
-          data,
-          cMapUrl: `https://unpkg.com/pdfjs-dist@${v}/cmaps/`,
-          cMapPacked: true,
-          standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${v}/standard_fonts/`,
-          useWorkerFetch: false,
-          isEvalSupported: false,
-          verbosity: 0,
-        }
-      },
-      {
-        name: 'Minimal config',
-        config: {
-          data,
-          useWorkerFetch: false,
-          isEvalSupported: false,
-          verbosity: 0,
-        }
-      },
-      {
-        name: 'Basic config',
-        config: {
-          data
+
+    const loadingTask = (lib as any).getDocument({ data });
+    try {
+      const pdf = await loadingTask.promise;
+      const texts: string[] = [];
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item?.str || '')
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (pageText) {
+          texts.push(pageText);
         }
       }
-    ];
-    for (const { name, config } of configs) {
+
+      return texts.join('\n').replace(/\n{2,}/g, '\n').trim();
+    } finally {
       try {
-        console.log(`Trying PDF loading with: ${name}`);
-        const loadingTask = (lib as any).getDocument(config);
-        const pdf = await loadingTask.promise;
-        console.log('PDF loaded successfully. Pages:', pdf.numPages);
-        const texts: string[] = [];
-        const maxPages = Math.min(pdf.numPages, 5);
-        for (let i = 1; i <= maxPages; i++) {
-          try {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            
-            // Production-grade text extraction: preserve reading order and layout
-            // This is how FAANG companies extract text - maintaining line structure
-            const textItems: Array<{str: string; y: number; x: number}> = [];
-            
-            for (const item of textContent.items) {
-              if (item.str && item.str.trim()) {
-                // Get text position for ordering
-                const transform = item.transform || [1, 0, 0, 1, 0, 0];
-                const x = transform[4] || 0;
-                const y = transform[5] || 0;
-                textItems.push({
-                  str: item.str,
-                  y: -y, // Negate because PDF Y increases downward
-                  x: x
-                });
-              }
-            }
-            
-            // Sort by reading order: top to bottom (higher Y first), then left to right
-            textItems.sort((a, b) => {
-              const yDiff = b.y - a.y; // Higher Y (top) comes first
-              if (Math.abs(yDiff) > 5) { // Different lines (>5px difference)
-                return yDiff;
-              }
-              return a.x - b.x; // Same line: left to right
-            });
-            
-            // Group into lines (items with similar Y coordinates)
-            const lines: string[] = [];
-            let currentLine: string[] = [];
-            let currentY = null;
-            const yThreshold = 8; // Pixels - items within this are same line
-            
-            for (const item of textItems) {
-              if (currentY === null) {
-                currentY = item.y;
-                currentLine = [item.str];
-              } else if (Math.abs(item.y - currentY) < yThreshold) {
-                // Same line
-                currentLine.push(item.str);
-              } else {
-                // New line
-                if (currentLine.length > 0) {
-                  lines.push(currentLine.join(' '));
-                }
-                currentLine = [item.str];
-                currentY = item.y;
-              }
-            }
-            // Add last line
-            if (currentLine.length > 0) {
-              lines.push(currentLine.join(' '));
-            }
-            
-            const pageText = lines.join('\n').trim();
-            if (pageText) {
-              texts.push(pageText);
-            }
-            console.log(`Page ${i} extracted: ${pageText.length} characters (${lines.length} lines)`);
-          } catch (pageErr) {
-            console.warn(`Failed to extract page ${i}:`, pageErr);
-            continue;
-          }
-        }
-        const fullText = texts.join('\n').trim();
-        console.log('Total extracted text length:', fullText.length);
-        
-        // Log sample of extracted text for debugging
-        if (fullText.length > 0) {
-          console.log('Sample extracted text (first 300 chars):', fullText.substring(0, 300));
-        } else {
-          console.warn('WARNING: No text extracted from PDF. The PDF may be image-based or corrupted.');
-        }
-        
-        try { 
-          (loadingTask as any).destroy(); 
-        } catch (destroyErr) {
-          console.warn('Error destroying PDF task:', destroyErr);
-        }
-        return fullText;
-      } catch (configErr) {
-        const errMsg = configErr instanceof Error ? configErr.message : String(configErr);
-        // Only log as warning, not error, to avoid console.error noise
-        if (name === 'Basic config') {
-          // Last attempt - log more details
-          console.warn(`PDF loading failed with ${name}:`, errMsg);
-        } else {
-          // Earlier attempts - minimal logging
-          console.log(`PDF loading attempt "${name}" failed, trying next...`);
-        }
-        continue; // Try next configuration
+        (loadingTask as any).destroy();
+      } catch {
+        // no-op
       }
     }
-    // All PDF.js configurations failed - this is expected for some PDFs
-    // Don't log as error, just return empty and let OCR try
-    console.log('PDF.js extraction failed - PDF may be image-based or require OCR');
-    return '';
   } catch (err) {
     console.error('PDF text extraction failed:', err);
     // Try OCR as fallback

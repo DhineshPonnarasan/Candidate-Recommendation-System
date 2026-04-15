@@ -8,9 +8,10 @@ A comprehensive **Full-Stack Candidate Recommendation System** powered by advanc
 
 ## 🌐 **Live Demo - Working Application**
 
+
 Experience the full power of ResumeIT with our live deployment:
 
-🔗 **Frontend Application:** https://candidate-recommendation-system-frontend.onrender.com
+🔗 **Frontend Application:** https://candidate-recommendation-system-frontend.onrender.com/
 
 🔗 **Backend API:** https://candidate-recommendation-system-backend.onrender.com/
 

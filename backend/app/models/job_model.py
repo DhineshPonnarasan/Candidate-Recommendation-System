@@ -1,5 +1,9 @@
 from datetime import datetime
-import pickle
+import json
+from typing import Any, Dict, Optional
+
+import numpy as np
+
 from config.sqlite_database import db_config
 
 class JobDescription:
@@ -14,6 +18,51 @@ class JobDescription:
         self.status = 'active'
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
+
+    @staticmethod
+    def _serialize_embedding(embedding: Optional[Any]) -> Optional[bytes]:
+        if embedding is None:
+            return None
+        if hasattr(embedding, 'tolist'):
+            payload = embedding.tolist()
+        else:
+            payload = embedding
+        return json.dumps(payload).encode('utf-8')
+
+    @staticmethod
+    def _deserialize_embedding(embedding_blob: Optional[Any]) -> Optional[np.ndarray]:
+        if embedding_blob is None:
+            return None
+
+        if isinstance(embedding_blob, memoryview):
+            embedding_blob = embedding_blob.tobytes()
+
+        if isinstance(embedding_blob, bytes):
+            try:
+                data = json.loads(embedding_blob.decode('utf-8'))
+                if isinstance(data, list):
+                    return np.array(data, dtype=np.float32)
+            except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+                return None
+
+        if isinstance(embedding_blob, str):
+            try:
+                data = json.loads(embedding_blob)
+                if isinstance(data, list):
+                    return np.array(data, dtype=np.float32)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return None
+
+        return None
+
+    @classmethod
+    def _row_to_job(cls, row: Any, include_embedding: bool = False) -> Dict[str, Any]:
+        job = dict(row)
+        if include_embedding:
+            job['embedding'] = cls._deserialize_embedding(job.get('embedding'))
+        else:
+            job.pop('embedding', None)
+        return job
     
     @classmethod
     def create(cls, user_id, title, company, description, requirements=None, file_path=None, embedding=None):
@@ -22,26 +71,33 @@ class JobDescription:
         if not conn:
             return None
             
+        cursor = None
         try:
             cursor = conn.cursor()
-            embedding_binary = pickle.dumps(embedding) if embedding is not None else None
+            embedding_binary = cls._serialize_embedding(embedding)
             
             cursor.execute('''
                 INSERT INTO job_descriptions (user_id, title, company, description, requirements, file_path, embedding)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, title, company, description, requirements, status, created_at
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (user_id, title, company, description, requirements, file_path, embedding_binary))
+
+            cursor.execute('''
+                SELECT id, title, company, description, requirements, status, created_at
+                FROM job_descriptions
+                WHERE id = ?
+            ''', (cursor.lastrowid,))
             
             result = cursor.fetchone()
             conn.commit()
-            return dict(result) if result else None
+            return cls._row_to_job(result) if result else None
             
         except Exception as e:
             conn.rollback()
             print(f"Error creating job description: {e}")
             return None
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -51,28 +107,26 @@ class JobDescription:
         if not conn:
             return None
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT id, user_id, title, company, description, requirements, 
                        file_path, embedding, status, created_at, updated_at
-                FROM job_descriptions WHERE id = %s
+                FROM job_descriptions WHERE id = ?
             ''', (job_id,))
             
             result = cursor.fetchone()
             if result:
-                job_data = dict(result)
-                # Convert embedding from binary
-                if job_data['embedding']:
-                    job_data['embedding'] = pickle.loads(job_data['embedding'])
-                return job_data
+                return cls._row_to_job(result, include_embedding=True)
             return None
             
         except Exception as e:
             print(f"Error finding job description: {e}")
             return None
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -82,25 +136,27 @@ class JobDescription:
         if not conn:
             return []
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT id, title, company, description, requirements, 
                        file_path, status, created_at, updated_at
                 FROM job_descriptions 
-                WHERE user_id = %s 
+                WHERE user_id = ? 
                 ORDER BY created_at DESC
-                LIMIT %s OFFSET %s
+                LIMIT ? OFFSET ?
             ''', (user_id, limit, offset))
             
             results = cursor.fetchall()
-            return [dict(row) for row in results]
+            return [cls._row_to_job(row) for row in results]
             
         except Exception as e:
             print(f"Error finding user job descriptions: {e}")
             return []
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -110,6 +166,7 @@ class JobDescription:
         if not conn:
             return []
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
@@ -118,24 +175,21 @@ class JobDescription:
                 FROM job_descriptions 
                 WHERE status = 'active'
                 ORDER BY created_at DESC
-                LIMIT %s OFFSET %s
+                LIMIT ? OFFSET ?
             ''', (limit, offset))
             
             results = cursor.fetchall()
             jobs = []
             for row in results:
-                job_data = dict(row)
-                # Convert embedding from binary
-                if job_data['embedding']:
-                    job_data['embedding'] = pickle.loads(job_data['embedding'])
-                jobs.append(job_data)
+                jobs.append(cls._row_to_job(row, include_embedding=True))
             return jobs
             
         except Exception as e:
             print(f"Error getting active job descriptions: {e}")
             return []
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -145,14 +199,15 @@ class JobDescription:
         if not conn:
             return False
             
+        cursor = None
         try:
             cursor = conn.cursor()
-            embedding_binary = pickle.dumps(embedding) if embedding is not None else None
+            embedding_binary = cls._serialize_embedding(embedding)
             
             cursor.execute('''
                 UPDATE job_descriptions 
-                SET embedding = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
+                SET embedding = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
             ''', (embedding_binary, job_id))
             
             conn.commit()
@@ -163,7 +218,8 @@ class JobDescription:
             print(f"Error updating job embedding: {e}")
             return False
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -173,12 +229,13 @@ class JobDescription:
         if not conn:
             return False
             
+        cursor = None
         try:
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE job_descriptions 
                 SET status = 'deleted', updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s AND user_id = %s
+                WHERE id = ? AND user_id = ?
             ''', (job_id, user_id))
             
             conn.commit()
@@ -189,7 +246,8 @@ class JobDescription:
             print(f"Error deleting job description: {e}")
             return False
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
     
     @classmethod
@@ -199,6 +257,7 @@ class JobDescription:
         if not conn:
             return []
             
+        cursor = None
         try:
             cursor = conn.cursor()
             search_query = f"%{query.lower()}%"
@@ -208,10 +267,10 @@ class JobDescription:
                     SELECT id, title, company, description, requirements,
                            status, created_at, updated_at
                     FROM job_descriptions 
-                    WHERE user_id = %s AND status = 'active'
-                    AND (LOWER(title) LIKE %s OR LOWER(company) LIKE %s)
+                    WHERE user_id = ? AND status = 'active'
+                    AND (LOWER(COALESCE(title, '')) LIKE ? OR LOWER(COALESCE(company, '')) LIKE ?)
                     ORDER BY created_at DESC
-                    LIMIT %s
+                    LIMIT ?
                 ''', (user_id, search_query, search_query, limit))
             else:
                 cursor.execute('''
@@ -219,17 +278,18 @@ class JobDescription:
                            status, created_at, updated_at
                     FROM job_descriptions 
                     WHERE status = 'active'
-                    AND (LOWER(title) LIKE %s OR LOWER(company) LIKE %s)
+                    AND (LOWER(COALESCE(title, '')) LIKE ? OR LOWER(COALESCE(company, '')) LIKE ?)
                     ORDER BY created_at DESC
-                    LIMIT %s
+                    LIMIT ?
                 ''', (search_query, search_query, limit))
             
             results = cursor.fetchall()
-            return [dict(row) for row in results]
+            return [cls._row_to_job(row) for row in results]
             
         except Exception as e:
             print(f"Error searching job descriptions: {e}")
             return []
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()

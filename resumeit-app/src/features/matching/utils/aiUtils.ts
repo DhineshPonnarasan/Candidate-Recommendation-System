@@ -744,26 +744,53 @@ function applyConfidenceGating(extraction: EntityExtraction): { email: string; p
  * Public API: Extract contact info from text (FAANG-style pipeline)
  */
 export function extractContactInfoFromText(text: string) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:388',message:'extractContactInfoFromText entry',data:{textLength:text?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  
-  if (!text || text.trim().length < 10) {
-    return { email: "", phone: "", linkedin: "" };
+  const safeText = (text || '').replace(/\u00A0/g, ' ');
+  const email =
+    safeText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)?.[0] || "";
+  const rawPhone =
+    safeText.match(/\+?\d?[\s.-]?(?:\(\d{2,4}\)|\d{2,4})[\s.-]?\d{3,4}[\s.-]?\d{3,4}/g)?.[0] ||
+    safeText.match(/\+?\d[\d\s().-]{8,16}\d/g)?.[0] || "";
+  const phone = normalizePhone(rawPhone);
+
+  const squashed = safeText
+    .replace(/\s*\/\s*/g, '/')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  let linkedin =
+    squashed.match(/https?:\/\/[^\s]*linkedin\.com\/(?:in|pub|company)\/[^\s)]+/i)?.[0] ||
+    squashed.match(/\b(?:www\.)?linkedin\.com\/(?:in|pub|company)\/[^\s)]+/i)?.[0] ||
+    "";
+
+  if (!linkedin) {
+    const stitched = safeText.replace(/\s+/g, '');
+    const broken = stitched.match(/linkedin\.com\/(?:in|pub|company)\/([A-Za-z0-9._%-]{3,80})/i);
+    if (broken) linkedin = `https://linkedin.com/in/${broken[1]}`;
   }
-  
-  const extraction = extractEntitiesFromHeader(text);
-  const gated = applyConfidenceGating(extraction);
-  
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:397',message:'extractContactInfoFromText: extraction result',data:{email:gated.email,phone:gated.phone,linkedin:gated.linkedin,emailConfidence:extraction.email.confidence,phoneConfidence:extraction.phone.confidence},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  
-  return {
-    email: gated.email,
-    phone: gated.phone,
-    linkedin: gated.linkedin,
-  };
+
+  if (!linkedin) {
+    const handle = safeText.match(/linkedin\s*[:\-]?\s*@?([A-Za-z0-9._-]{3,80})/i)?.[1];
+    if (handle) linkedin = `https://linkedin.com/in/${handle}`;
+  }
+
+  if (!linkedin) {
+    const compact = safeText.replace(/\s+/g, '');
+    const brokenPath = compact.match(/linkedin\.com(?:\/)??(in|pub|company)(?:\/)?([A-Za-z0-9._%-]{3,80})/i);
+    if (brokenPath) {
+      linkedin = `https://linkedin.com/${brokenPath[1].toLowerCase()}/${brokenPath[2]}`;
+    }
+  }
+
+  if (linkedin && !/^https?:\/\//i.test(linkedin)) {
+    linkedin = `https://${linkedin}`;
+  }
+
+  linkedin = linkedin
+    .replace(/[)>.,;]+$/g, '')
+    .replace(/\s+/g, '')
+    .replace(/linkedin\.com\/(?!in\/|pub\/|company\/)/i, 'linkedin.com/in/');
+
+  return { email, phone, linkedin };
 }
 function normalizePhone(p?: string) {
   if (!p) return "";
@@ -780,15 +807,46 @@ function normalizePhone(p?: string) {
  * Uses header-first extraction with confidence scoring
  */
 export function extractCandidateNameFromText(text: string): string {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:419',message:'extractCandidateNameFromText entry',data:{textLength:text?.length || 0,textPreview:text?.substring(0,100) || ''},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  
-  if (!text || text.trim().length < 10) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/c4cd3831-a807-403e-b334-69b6f39b6aee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiUtils.ts:422',message:'extractCandidateNameFromText: text too short',data:{textLength:text?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    return "Unknown Candidate";
+  if (!text) return "Unknown Candidate";
+  const rawHead = text.slice(0, 1500);
+  const lines = rawHead
+    .split(/\r?\n/)
+    .map(l => l.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 14);
+  const head = rawHead.replace(/\s+/g, " ").trim();
+  const headStrip = head
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, " ")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/\+?\d[\d\s().-]{8,}/g, " ");
+
+  const banned = /\b(RESUME|CURRICULUM|VITAE|CONTACT|SUMMARY|OBJECTIVE|EXPERIENCE|EDUCATION|SKILLS|PROJECTS|PROFILE|CERTIFICATIONS|WORK|HISTORY|SOFTWARE|ENGINEER|DEVELOPER|STACK|FULL|ROLE)\b/i;
+
+  const lineName = lines.find((line) => {
+    if (line.length < 5 || line.length > 60) return false;
+    if (banned.test(line)) return false;
+    if (/[0-9@]|linkedin|github|portfolio|mailto:/i.test(line)) return false;
+    const tokens = line.split(' ');
+    if (tokens.length < 2 || tokens.length > 4) return false;
+    return tokens.every(token => /^[A-Za-z][A-Za-z'\-.]*$/.test(token));
+  });
+  if (lineName) {
+    return lineName
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase())
+      .trim();
+  }
+
+  const locPat = /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z\-']+){1,4})\s+[A-Z][a-zA-Z]+,\s*(?:[A-Z]{2,3}|[A-Z][a-zA-Z]+)\b/;
+  const locMatch = head.match(locPat);
+  if (locMatch && !banned.test(locMatch[1])) return locMatch[1].trim();
+  const tcStart = headStrip.match(/^([A-Z][a-z]{2,20}(?:\s+[A-Z][a-zA-Z\-']{2,20}){1,4})\b/);
+  if (tcStart && !banned.test(tcStart[1])) return tcStart[1].trim();
+  const tcAny = headStrip.match(/\b([A-Z][a-z]{2,20}(?:\s+[A-Z][a-zA-Z\-']{2,20}){1,4})\b/);
+  if (tcAny && !banned.test(tcAny[1])) return tcAny[1].trim();
+  const caps = head.match(/\b([A-Z]{2,}(?:\s+[A-Z]{2,}){1,4})\b/);
+  if (caps && !banned.test(caps[1])) {
+    return caps[1].toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).trim();
   }
   
   // Use the FAANG-style pipeline

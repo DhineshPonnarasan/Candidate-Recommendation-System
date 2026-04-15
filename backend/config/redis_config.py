@@ -1,18 +1,13 @@
 import os
+import json
+from dotenv import load_dotenv
+
 try:
     import redis
-    REDIS_AVAILABLE = True
 except ImportError:
-    print("Warning: redis not installed. Caching will be disabled.")
     redis = None
-    REDIS_AVAILABLE = False
-import json
-import pickle
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+
+load_dotenv()
 
 class RedisConfig:
     """Redis cache configuration and operations"""
@@ -26,7 +21,7 @@ class RedisConfig:
         
     def get_client(self, decode_responses=True):
         """Create and return a Redis client"""
-        if not REDIS_AVAILABLE or redis is None:
+        if redis is None:
             return None
         try:
             client = redis.Redis(
@@ -50,7 +45,8 @@ class RedisConfig:
         client = self.get_client(decode_responses=False)
         if client:
             try:
-                client.setex(key, expiry, pickle.dumps(embedding))
+                payload = embedding.tolist() if hasattr(embedding, 'tolist') else embedding
+                client.setex(key, expiry, json.dumps(payload).encode('utf-8'))
                 return True
             except Exception as e:
                 print(f"Error caching embedding: {e}")
@@ -63,7 +59,7 @@ class RedisConfig:
             try:
                 data = client.get(key)
                 if data:
-                    return pickle.loads(data)
+                    return json.loads(data.decode('utf-8'))
             except Exception as e:
                 print(f"Error retrieving cached embedding: {e}")
         return None
